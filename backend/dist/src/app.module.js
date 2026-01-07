@@ -13,11 +13,21 @@ const auth_module_1 = require("./modules/auth/auth.module");
 const pricing_module_1 = require("./modules/pricing/pricing.module");
 const wallet_module_1 = require("./modules/wallet/wallet.module");
 const bookings_module_1 = require("./modules/bookings/bookings.module");
+const courts_module_1 = require("./modules/courts/courts.module");
+const profile_module_1 = require("./modules/profile/profile.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [auth_module_1.AuthModule, admin_module_1.AdminModule, pricing_module_1.PricingModule, wallet_module_1.WalletModule, bookings_module_1.BookingsModule],
+        imports: [
+            auth_module_1.AuthModule,
+            admin_module_1.AdminModule,
+            pricing_module_1.PricingModule,
+            wallet_module_1.WalletModule,
+            bookings_module_1.BookingsModule,
+            courts_module_1.CourtsModule,
+            profile_module_1.ProfileModule
+        ],
     })
 ], AppModule);

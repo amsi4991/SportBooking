@@ -17,6 +17,10 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   password  String
+  firstName String?
+  lastName  String?
+  phone     String?
+  city      String?
   role      Role     @default(user)
   wallet    Wallet?
   bookings  Booking[]
@@ -34,6 +38,10 @@ model Wallet {
 model Court {
   id       String    @id @default(uuid()) @db.Uuid
   name     String
+  city     String
+  sport    String
+  description String?
+  image    String?
   bookings Booking[]
   priceRules PriceRule[]
 }

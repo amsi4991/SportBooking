@@ -1,5 +1,6 @@
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeftOnRectangleIcon, WalletIcon } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 export default function Navigation() {
@@ -26,9 +27,23 @@ export default function Navigation() {
   return (
     <nav className="bg-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-        <div className="flex items-center gap-3">
-          <div className="text-2xl font-bold text-blue-600">⚽</div>
-          <h1 className="text-xl font-bold text-gray-900">SportBook</h1>
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-3">
+            <div className="text-2xl font-bold text-blue-600">⚽</div>
+            <h1 className="text-xl font-bold text-gray-900">SportBook</h1>
+          </div>
+
+          <div className="hidden md:flex items-center gap-6">
+            <Link to="/dashboard" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+              Dashboard
+            </Link>
+            <Link to="/courts" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+              Campi
+            </Link>
+            <Link to="/profile" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+              Profilo
+            </Link>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">

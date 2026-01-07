@@ -2,6 +2,9 @@
 import { Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Courts from './pages/Courts';
+import CourtDetail from './pages/CourtDetail';
+import Profile from './pages/Profile';
 import ProtectedRoute from './guards/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -15,6 +18,30 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/courts"
+          element={
+            <ProtectedRoute>
+              <Courts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/court/:id"
+          element={
+            <ProtectedRoute>
+              <CourtDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />

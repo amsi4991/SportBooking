@@ -4,8 +4,18 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
+import { CourtsModule } from './modules/courts/courts.module';
+import { ProfileModule } from './modules/profile/profile.module';
 
 @Module({
-  imports: [AuthModule, AdminModule, PricingModule, WalletModule, BookingsModule],
+  imports: [
+    AuthModule,
+    AdminModule,
+    PricingModule,
+    WalletModule,
+    BookingsModule,
+    CourtsModule,
+    ProfileModule
+  ],
 })
 export class AppModule {}
