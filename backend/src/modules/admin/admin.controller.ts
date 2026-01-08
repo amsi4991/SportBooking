@@ -4,6 +4,7 @@ import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { UpdateWalletDto } from './dtos/update-wallet.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -44,7 +45,7 @@ export class AdminController {
   @Patch('users/:userId/wallet')
   updateUserWallet(
     @Param('userId') userId: string,
-    @Body() body: { amount: number; operation: 'add' | 'subtract'; description?: string }
+    @Body() body: UpdateWalletDto
   ) {
     return this.service.updateUserWallet(userId, body.amount, body.operation, body.description);
   }

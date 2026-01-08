@@ -34,7 +34,12 @@ export class AdminService {
       select: {
         id: true,
         email: true,
-        role: true
+        role: true,
+        wallet: {
+          select: {
+            balance: true
+          }
+        }
       }
     });
   }
@@ -120,6 +125,22 @@ export class AdminService {
   }
 
   async updateUserWallet(userId: string, amount: number, operation: 'add' | 'subtract', description?: string) {
+    // Validazione input
+    if (!userId) {
+      throw new BadRequestException('User ID mancante');
+    }
+
+    if (!amount || amount <= 0) {
+      throw new BadRequestException('Importo non valido');
+    }
+
+    if (!operation || !['add', 'subtract'].includes(operation)) {
+      throw new BadRequestException('Operazione non valida');
+    }
+
+    // Converti da euro a centesimi
+    const amountInCents = Math.round(amount * 100);
+
     // Verifica che l'utente esista
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -134,15 +155,20 @@ export class AdminService {
       throw new NotFoundException('Wallet non trovato');
     }
 
-    if (operation === 'subtract' && user.wallet.balance < amount) {
-      throw new BadRequestException('Credito insufficiente');
+    if (operation === 'subtract' && user.wallet.balance < amountInCents) {
+      throw new BadRequestException('Credito insufficiente nel wallet');
     }
 
     let updatedWallet;
-    if (operation === 'add') {
-      updatedWallet = await this.wallet.addCredit(userId, amount, description || 'Caricamento credito da admin');
-    } else {
-      updatedWallet = await this.wallet.spend(userId, amount, description || 'Decurtazione credito da admin');
+    try {
+      if (operation === 'add') {
+        updatedWallet = await this.wallet.addCredit(userId, amountInCents, description || 'Caricamento credito da admin');
+      } else {
+        updatedWallet = await this.wallet.spend(userId, amountInCents, description || 'Decurtazione credito da admin');
+      }
+    } catch (error) {
+      console.error('Errore aggiornamento wallet:', error);
+      throw new BadRequestException(`Errore nell'aggiornamento del wallet: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
     }
 
     return updatedWallet;

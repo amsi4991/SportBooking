@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-import { TrashIcon, SparklesIcon, ArrowUpRightIcon, ArrowDownLeftIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, SparklesIcon, ArrowUpRightIcon, ArrowDownLeftIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { 
   getAdminStats, 
   getAdminBookings, 
@@ -27,6 +27,9 @@ interface User {
   id: string;
   email: string;
   role: string;
+  wallet?: {
+    balance: number;
+  };
 }
 
 interface Stats {
@@ -60,8 +63,9 @@ export default function Admin() {
   const [showCreateUserForm, setShowCreateUserForm] = useState(false);
   const [newUserForm, setNewUserForm] = useState({ email: '', password: '', firstName: '', lastName: '' });
   
-  // Form per modificare wallet
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  // Modal per modificare wallet
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [walletForm, setWalletForm] = useState({ amount: 0, operation: 'add' as 'add' | 'subtract', description: '' });
 
   useEffect(() => {
@@ -120,15 +124,16 @@ export default function Admin() {
   }
 
   async function handleUpdateWallet() {
-    if (!selectedUserId || !walletForm.amount) {
+    if (!selectedUser || !walletForm.amount) {
       setMessage({ type: 'error', text: '❌ Inserisci un importo valido' });
       return;
     }
 
     try {
-      await updateUserWallet(selectedUserId, Math.round(walletForm.amount * 100), walletForm.operation, walletForm.description);
+      await updateUserWallet(selectedUser.id, walletForm.amount, walletForm.operation, walletForm.description);
       setMessage({ type: 'success', text: '✅ Wallet aggiornato!' });
-      setSelectedUserId(null);
+      setShowWalletModal(false);
+      setSelectedUser(null);
       setWalletForm({ amount: 0, operation: 'add', description: '' });
       loadAdminData();
     } catch (error) {
@@ -346,76 +351,123 @@ export default function Admin() {
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Ruolo</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Wallet</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Saldo Wallet</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Azioni</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
                   <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-900">{user.email}</td>
+                    <td className="py-3 px-4 text-gray-900 font-medium">{user.email}</td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-md text-xs font-semibold ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
                         {user.role}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-gray-700">
-                      {selectedUserId === user.id ? (
-                        <div className="space-y-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder="Importo €"
-                            value={walletForm.amount}
-                            onChange={(e) => setWalletForm({ ...walletForm, amount: parseFloat(e.target.value) || 0 })}
-                            className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
-                          />
-                          <select
-                            value={walletForm.operation}
-                            onChange={(e) => setWalletForm({ ...walletForm, operation: e.target.value as 'add' | 'subtract' })}
-                            className="w-32 px-2 py-1 border border-gray-300 rounded text-sm block"
-                          >
-                            <option value="add">Aggiungi</option>
-                            <option value="subtract">Decurta</option>
-                          </select>
-                          <input
-                            type="text"
-                            placeholder="Nota (opzionale)"
-                            value={walletForm.description}
-                            onChange={(e) => setWalletForm({ ...walletForm, description: e.target.value })}
-                            className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
-                          />
-                          <div className="flex gap-1">
-                            <button
-                              onClick={handleUpdateWallet}
-                              className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs font-medium"
-                            >
-                              Salva
-                            </button>
-                            <button
-                              onClick={() => setSelectedUserId(null)}
-                              className="bg-gray-300 hover:bg-gray-400 text-gray-900 px-2 py-1 rounded text-xs font-medium"
-                            >
-                              Annulla
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setSelectedUserId(user.id)}
-                          className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition"
-                        >
-                          Modifica
-                        </button>
-                      )}
+                    <td className="py-3 px-4">
+                      <span className="text-lg font-bold text-blue-600">
+                        €{user.wallet ? (user.wallet.balance / 100).toFixed(2) : '0.00'}
+                      </span>
                     </td>
-                    <td className="py-3 px-4">—</td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowWalletModal(true);
+                          setWalletForm({ amount: 0, operation: 'add', description: '' });
+                        }}
+                        className="bg-green-50 hover:bg-green-100 text-green-600 px-3 py-2 rounded-md text-sm font-medium transition"
+                      >
+                        Gestisci wallet
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+
+        {/* Modal Gestione Wallet */}
+        {showWalletModal && selectedUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Gestisci Wallet</h3>
+                <button
+                  onClick={() => {
+                    setShowWalletModal(false);
+                    setSelectedUser(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-gray-600">Email: <span className="font-semibold text-gray-900">{selectedUser.email}</span></p>
+                <p className="text-sm text-gray-600 mt-1">Saldo attuale: <span className="text-lg font-bold text-blue-600">€{selectedUser.wallet ? (selectedUser.wallet.balance / 100).toFixed(2) : '0.00'}</span></p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Operazione</label>
+                  <select
+                    value={walletForm.operation}
+                    onChange={(e) => setWalletForm({ ...walletForm, operation: e.target.value as 'add' | 'subtract' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  >
+                    <option value="add">Aggiungi credito (+)</option>
+                    <option value="subtract">Decurta credito (-)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Importo (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={walletForm.amount}
+                    onChange={(e) => setWalletForm({ ...walletForm, amount: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nota (opzionale)</label>
+                  <input
+                    type="text"
+                    placeholder="Es: Bonus fedeltà"
+                    value={walletForm.description}
+                    onChange={(e) => setWalletForm({ ...walletForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <button
+                    onClick={handleUpdateWallet}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium transition"
+                  >
+                    Salva modifiche
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowWalletModal(false);
+                      setSelectedUser(null);
+                    }}
+                    className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-900 px-4 py-2 rounded-md font-medium transition"
+                  >
+                    Annulla
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
