@@ -18,8 +18,6 @@ async function main() {
     create: {
       email: 'admin@test.it',
       password: hash('admin123'),
-      firstName: 'Admin',
-      lastName: 'User',
       role: Role.admin,
       wallet: {
         create: {
@@ -36,10 +34,6 @@ async function main() {
     create: {
       email: 'user@test.it',
       password: hash('user123'),
-      firstName: 'Marco',
-      lastName: 'Rossi',
-      phone: '+39 123 456 7890',
-      city: 'Milano',
       role: Role.user,
       wallet: {
         create: {

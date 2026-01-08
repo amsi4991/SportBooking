@@ -20,10 +20,10 @@ let WalletController = class WalletController {
         this.service = service;
     }
     get(req) {
-        return this.service.getWallet(req.user.sub);
+        return this.service.getWallet(req.user.id);
     }
     add(req, body) {
-        return this.service.addCredit(req.user.sub, body.amount);
+        return this.service.addCredit(req.user.id, body.amount);
     }
 };
 exports.WalletController = WalletController;

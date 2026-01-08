@@ -8,11 +8,11 @@ export class WalletController {
 
   @Get()
   get(@Req() req: any) {
-    return this.service.getWallet(req.user.sub);
+    return this.service.getWallet(req.user.id);
   }
 
   @Post('add')
   add(@Req() req: any, @Body() body: any) {
-    return this.service.addCredit(req.user.sub, body.amount);
+    return this.service.addCredit(req.user.id, body.amount);
   }
 }

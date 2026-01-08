@@ -9,16 +9,16 @@ export class ProfileController {
 
   @Get()
   async get(@Req() req: any) {
-    return this.service.getProfile(req.user.sub);
+    return this.service.getProfile(req.user.id);
   }
 
   @Patch()
   async update(@Req() req: any, @Body() body: any) {
-    return this.service.updateProfile(req.user.sub, body);
+    return this.service.updateProfile(req.user.id, body);
   }
 
   @Get('bookings')
   async getBookings(@Req() req: any) {
-    return this.service.getMyBookings(req.user.sub);
+    return this.service.getMyBookings(req.user.id);
   }
 }

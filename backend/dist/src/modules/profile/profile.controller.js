@@ -21,13 +21,13 @@ let ProfileController = class ProfileController {
         this.service = service;
     }
     async get(req) {
-        return this.service.getProfile(req.user.sub);
+        return this.service.getProfile(req.user.id);
     }
     async update(req, body) {
-        return this.service.updateProfile(req.user.sub, body);
+        return this.service.updateProfile(req.user.id, body);
     }
     async getBookings(req) {
-        return this.service.getMyBookings(req.user.sub);
+        return this.service.getMyBookings(req.user.id);
     }
 };
 exports.ProfileController = ProfileController;
