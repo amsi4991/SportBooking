@@ -1,11 +1,26 @@
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeftOnRectangleIcon, WalletIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftOnRectangleIcon, WalletIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+
+function decodeToken(token: string) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    return null;
+  }
+}
 
 export default function Navigation() {
   const { logout } = useAuth();
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Fetch wallet balance
@@ -17,6 +32,20 @@ export default function Navigation() {
       .then(res => res.json())
       .then(data => setWalletBalance(data.balance))
       .catch(console.error);
+
+    // Check if user is admin by decoding JWT
+    const token = localStorage.getItem('token');
+    console.log('Token from localStorage:', token ? 'EXISTS' : 'MISSING');
+    
+    if (token) {
+      const payload = decodeToken(token);
+      console.log('Full Token payload:', payload);
+      console.log('Role from payload:', payload?.role);
+      console.log('Is Admin?', payload?.role === 'admin');
+      setIsAdmin(payload?.role === 'admin');
+    } else {
+      console.log('No token found in localStorage');
+    }
   }, []);
 
   const handleLogout = () => {
@@ -43,6 +72,12 @@ export default function Navigation() {
             <Link to="/profile" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
               Profilo
             </Link>
+            {isAdmin && (
+              <Link to="/admin" className="flex items-center gap-2 text-purple-600 hover:text-purple-700 font-medium transition-colors">
+                <SparklesIcon className="h-5 w-5" />
+                Admin
+              </Link>
+            )}
           </div>
         </div>
 

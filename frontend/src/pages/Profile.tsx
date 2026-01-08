@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-import { UserIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { UserIcon, CalendarIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { deleteBooking } from '../services/booking';
 
 interface UserProfile {
   id: string;
@@ -72,6 +73,21 @@ export default function Profile() {
       setBookings(data);
     } catch (error) {
       console.error('Errore:', error);
+    }
+  }
+
+  async function handleDeleteBooking(bookingId: string) {
+    if (!confirm('Sei sicuro di voler eliminare questa prenotazione? Il credito sarà rimborsato.')) {
+      return;
+    }
+
+    try {
+      await deleteBooking(bookingId);
+      setMessage({ type: 'success', text: '✅ Prenotazione eliminata e credito rimborsato!' });
+      loadBookings();
+      loadProfile();
+    } catch (error) {
+      setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
     }
   }
 
@@ -245,10 +261,11 @@ export default function Profile() {
               {bookings.map((booking) => {
                 const start = new Date(booking.startsAt);
                 const end = new Date(booking.endsAt);
+                const isUpcoming = start > new Date();
 
                 return (
                   <div key={booking.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
                       <div>
                         <p className="text-sm text-gray-600">Campo</p>
                         <p className="font-semibold text-gray-900">{booking.court.name}</p>
@@ -267,12 +284,23 @@ export default function Profile() {
                         </p>
                       </div>
 
-                      <div>
-                        <p className="text-sm text-gray-600">Prezzo</p>
-                        <p className="font-semibold text-gray-900">€{(booking.totalPrice / 100).toFixed(2)}</p>
-                        <p className={`text-xs font-semibold mt-1 ${booking.status === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
-                          {booking.status}
-                        </p>
+                      <div className="flex flex-col justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Prezzo</p>
+                          <p className="font-semibold text-gray-900">€{(booking.totalPrice / 100).toFixed(2)}</p>
+                          <p className={`text-xs font-semibold mt-1 ${booking.status === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
+                            {booking.status}
+                          </p>
+                        </div>
+                        {isUpcoming && (
+                          <button
+                            onClick={() => handleDeleteBooking(booking.id)}
+                            className="mt-2 bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 w-fit"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                            Elimina
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

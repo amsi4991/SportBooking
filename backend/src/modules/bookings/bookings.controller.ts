@@ -1,5 +1,4 @@
-
-import { Controller, Post, Get, Body, UseGuards, Req, Param } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, UseGuards, Req, Param } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
@@ -24,5 +23,13 @@ export class BookingsController {
       new Date(body.startsAt),
       new Date(body.endsAt)
     );
+  }
+
+  @Delete(':bookingId')
+  async delete(
+    @Req() req: any,
+    @Param('bookingId') bookingId: string
+  ) {
+    return this.service.deleteBooking(req.user.id, bookingId);
   }
 }

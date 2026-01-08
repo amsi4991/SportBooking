@@ -12,3 +12,9 @@ export async function createBooking(data: any) {
     body: JSON.stringify(data)
   });
 }
+
+export async function deleteBooking(bookingId: string) {
+  return apiFetch(`/bookings/${bookingId}`, {
+    method: 'DELETE'
+  });
+}

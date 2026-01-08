@@ -17,8 +17,14 @@ export class AuthService {
   }
 
   async generateTokens(userId: string) {
+    // Get user role
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    });
+
     const accessToken = await this.jwt.signAsync(
-      { sub: userId },
+      { sub: userId, role: user?.role || 'user' },
       { expiresIn: '15m' }
     );
 

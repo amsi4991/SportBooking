@@ -77,14 +77,21 @@ async function main() {
     }
   });
 
-  // PRICE RULES
+  // PRICE RULES - Create rules for all days of the week
   await prisma.priceRule.deleteMany({});
+  const priceRulesData = [];
+  
+  // Create rules for each day (0=Sunday to 6=Saturday)
+  for (let day = 0; day < 7; day++) {
+    priceRulesData.push(
+      { courtId: court1.id, weekday: day, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 5000 },
+      { courtId: court2.id, weekday: day, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 6000 },
+      { courtId: court3.id, weekday: day, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 4000 },
+    );
+  }
+  
   await prisma.priceRule.createMany({
-    data: [
-      { courtId: court1.id, weekday: 1, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 5000 },
-      { courtId: court2.id, weekday: 1, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 6000 },
-      { courtId: court3.id, weekday: 1, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 4000 },
-    ]
+    data: priceRulesData
   });
 
   console.log('✅ Seed completato');

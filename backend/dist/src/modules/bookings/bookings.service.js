@@ -35,6 +35,14 @@ let BookingsService = class BookingsService {
         });
     }
     async createBooking(userId, courtId, startsAt, endsAt) {
+        // Verifica che la prenotazione non sia nel passato
+        const now = new Date();
+        if (startsAt < now) {
+            throw new common_1.ConflictException('Non puoi prenotare orari nel passato');
+        }
+        if (endsAt <= startsAt) {
+            throw new common_1.ConflictException('L\'orario di fine deve essere dopo quello di inizio');
+        }
         const lockKey = `lock:${courtId}:${startsAt.toISOString()}:${endsAt.toISOString()}`;
         const result = await this.redis.set(lockKey, '1', 'EX', 30, 'NX');
         if (result !== 'OK') {
@@ -57,6 +65,25 @@ let BookingsService = class BookingsService {
         finally {
             await this.redis.del(lockKey);
         }
+    }
+    async deleteBooking(userId, bookingId) {
+        // Verifica che la prenotazione esista e appartenga all'utente
+        const booking = await this.prisma.booking.findUnique({
+            where: { id: bookingId }
+        });
+        if (!booking) {
+            throw new common_1.NotFoundException('Prenotazione non trovata');
+        }
+        if (booking.userId !== userId) {
+            throw new common_1.ForbiddenException('Non puoi eliminare prenotazioni di altri utenti');
+        }
+        // Elimina la prenotazione
+        await this.prisma.booking.delete({
+            where: { id: bookingId }
+        });
+        // Rimborsa il credito nel wallet
+        await this.wallet.addCredit(userId, booking.totalPrice);
+        return { message: 'Prenotazione eliminata e credito rimborsato', refundAmount: booking.totalPrice };
     }
 };
 exports.BookingsService = BookingsService;

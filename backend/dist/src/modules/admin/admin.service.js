@@ -12,9 +12,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../database/prisma.service");
+const wallet_service_1 = require("../wallet/wallet.service");
 let AdminService = class AdminService {
-    constructor(prisma) {
+    constructor(prisma, wallet) {
         this.prisma = prisma;
+        this.wallet = wallet;
     }
     async getStats() {
         const totalBookings = await this.prisma.booking.count();
@@ -40,9 +42,30 @@ let AdminService = class AdminService {
             }
         });
     }
+    async deleteBooking(bookingId) {
+        // Verifica che la prenotazione esista
+        const booking = await this.prisma.booking.findUnique({
+            where: { id: bookingId }
+        });
+        if (!booking) {
+            throw new common_1.NotFoundException('Prenotazione non trovata');
+        }
+        // Elimina la prenotazione
+        await this.prisma.booking.delete({
+            where: { id: bookingId }
+        });
+        // Rimborsa il credito nel wallet dell'utente
+        await this.wallet.addCredit(booking.userId, booking.totalPrice);
+        return {
+            message: 'Prenotazione eliminata e credito rimborsato all\'utente',
+            refundAmount: booking.totalPrice,
+            userEmail: booking.userId
+        };
+    }
 };
 exports.AdminService = AdminService;
 exports.AdminService = AdminService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        wallet_service_1.WalletService])
 ], AdminService);

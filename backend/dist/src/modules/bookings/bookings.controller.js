@@ -26,6 +26,9 @@ let BookingsController = class BookingsController {
     async create(req, body) {
         return this.service.createBooking(req.user.id, body.courtId, new Date(body.startsAt), new Date(body.endsAt));
     }
+    async delete(req, bookingId) {
+        return this.service.deleteBooking(req.user.id, bookingId);
+    }
 };
 exports.BookingsController = BookingsController;
 __decorate([
@@ -43,6 +46,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], BookingsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Delete)(':bookingId'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('bookingId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], BookingsController.prototype, "delete", null);
 exports.BookingsController = BookingsController = __decorate([
     (0, common_1.Controller)('bookings'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

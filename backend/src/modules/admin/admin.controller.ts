@@ -1,5 +1,5 @@
 
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Delete, UseGuards, Param } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -24,5 +24,10 @@ export class AdminController {
   @Get('users')
   users() {
     return this.service.listUsers();
+  }
+
+  @Delete('bookings/:bookingId')
+  async deleteBooking(@Param('bookingId') bookingId: string) {
+    return this.service.deleteBooking(bookingId);
   }
 }
