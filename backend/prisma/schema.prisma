@@ -24,15 +24,17 @@ model User {
   role      Role     @default(user)
   wallet    Wallet?
   bookings  Booking[]
+  transactions Transaction[]
   refreshTokens RefreshToken[]
   createdAt DateTime @default(now())
 }
 
 model Wallet {
-  id      String @id @default(uuid())
-  balance Int    @default(0)
-  userId  String @unique
-  user    User   @relation(fields: [userId], references: [id])
+  id        String        @id @default(uuid())
+  balance   Int           @default(0)
+  userId    String        @unique
+  user      User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
 }
 
 model Court {
@@ -84,4 +86,27 @@ model PriceRule {
   court Court @relation(fields: [courtId], references: [id])
 
   @@index([courtId, weekday])
+}
+
+enum TransactionType {
+  deposit
+  withdrawal
+  refund
+  booking_payment
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  walletId    String
+  userId      String
+  type        TransactionType
+  amount      Int             // in cents
+  description String?
+  createdAt   DateTime        @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([walletId, createdAt])
 }

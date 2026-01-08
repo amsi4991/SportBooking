@@ -1,7 +1,8 @@
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class AdminService {
@@ -54,12 +55,105 @@ export class AdminService {
     });
 
     // Rimborsa il credito nel wallet dell'utente
-    await this.wallet.addCredit(booking.userId, booking.totalPrice);
+    await this.wallet.refund(booking.userId, booking.totalPrice, `Rimborso prenotazione cancellata da admin`);
 
     return { 
       message: 'Prenotazione eliminata e credito rimborsato all\'utente', 
       refundAmount: booking.totalPrice,
       userEmail: booking.userId
     };
+  }
+
+  async getWalletTransactions(limit: number = 100) {
+    return this.prisma.transaction.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+  }
+
+  async createUser(email: string, password: string, firstName?: string, lastName?: string) {
+    // Verifica che l'email non esista già
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('Email già in uso');
+    }
+
+    // Hash della password
+    const hashedPassword = await argon2.hash(password);
+
+    // Crea l'utente
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        wallet: {
+          create: {
+            balance: 0
+          }
+        }
+      },
+      include: {
+        wallet: true
+      }
+    });
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      wallet: user.wallet
+    };
+  }
+
+  async updateUserWallet(userId: string, amount: number, operation: 'add' | 'subtract', description?: string) {
+    // Verifica che l'utente esista
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { wallet: true }
+    });
+
+    if (!user) {
+      throw new NotFoundException('Utente non trovato');
+    }
+
+    if (!user.wallet) {
+      throw new NotFoundException('Wallet non trovato');
+    }
+
+    if (operation === 'subtract' && user.wallet.balance < amount) {
+      throw new BadRequestException('Credito insufficiente');
+    }
+
+    let updatedWallet;
+    if (operation === 'add') {
+      updatedWallet = await this.wallet.addCredit(userId, amount, description || 'Caricamento credito da admin');
+    } else {
+      updatedWallet = await this.wallet.spend(userId, amount, description || 'Decurtazione credito da admin');
+    }
+
+    return updatedWallet;
+  }
+
+  async getUserWithWallet(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        wallet: true
+      }
+    });
   }
 }

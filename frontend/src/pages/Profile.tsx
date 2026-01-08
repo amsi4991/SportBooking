@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-import { UserIcon, CalendarIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { UserIcon, CalendarIcon, TrashIcon, ArrowUpRightIcon, ArrowDownLeftIcon } from '@heroicons/react/24/outline';
 import { deleteBooking } from '../services/booking';
+import { getTransactions } from '../services/wallet';
 
 interface UserProfile {
   id: string;
@@ -23,10 +24,19 @@ interface Booking {
   totalPrice: number;
 }
 
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  createdAt: string;
+}
+
 export default function Profile() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -40,6 +50,7 @@ export default function Profile() {
   useEffect(() => {
     loadProfile();
     loadBookings();
+    loadTransactions();
   }, []);
 
   async function loadProfile() {
@@ -76,6 +87,15 @@ export default function Profile() {
     }
   }
 
+  async function loadTransactions() {
+    try {
+      const data = await getTransactions();
+      setTransactions(data);
+    } catch (error) {
+      console.error('Errore nel caricamento transazioni:', error);
+    }
+  }
+
   async function handleDeleteBooking(bookingId: string) {
     if (!confirm('Sei sicuro di voler eliminare questa prenotazione? Il credito sarà rimborsato.')) {
       return;
@@ -86,6 +106,7 @@ export default function Profile() {
       setMessage({ type: 'success', text: '✅ Prenotazione eliminata e credito rimborsato!' });
       loadBookings();
       loadProfile();
+      loadTransactions();
     } catch (error) {
       setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
     }
@@ -248,7 +269,7 @@ export default function Profile() {
         </div>
 
         {/* Bookings */}
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
             <CalendarIcon className="h-6 w-6 text-blue-600" />
             Le mie prenotazioni
@@ -303,6 +324,41 @@ export default function Profile() {
                         )}
                       </div>
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Transactions */}
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Cronologia transazioni</h2>
+
+          {transactions.length === 0 ? (
+            <p className="text-gray-500">Nessuna transazione</p>
+          ) : (
+            <div className="space-y-3">
+              {transactions.map((tx) => {
+                const date = new Date(tx.createdAt);
+                const isDeposit = tx.type === 'deposit' || tx.type === 'refund';
+                const icon = isDeposit ? ArrowDownLeftIcon : ArrowUpRightIcon;
+                const Icon = icon;
+
+                return (
+                  <div key={tx.id} className="flex items-center justify-between border-b border-gray-200 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-full ${isDeposit ? 'bg-green-100' : 'bg-red-100'}`}>
+                        <Icon className={`h-5 w-5 ${isDeposit ? 'text-green-600' : 'text-red-600'}`} />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{tx.description}</p>
+                        <p className="text-sm text-gray-600">{date.toLocaleDateString('it-IT')} {date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                    </div>
+                    <p className={`font-bold text-lg ${isDeposit ? 'text-green-600' : 'text-red-600'}`}>
+                      {isDeposit ? '+' : '-'}€{(tx.amount / 100).toFixed(2)}
+                    </p>
                   </div>
                 );
               })}

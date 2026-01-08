@@ -1,5 +1,5 @@
 
-import { Controller, Get, Delete, UseGuards, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, UseGuards, Param, Body } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -24,6 +24,29 @@ export class AdminController {
   @Get('users')
   users() {
     return this.service.listUsers();
+  }
+
+  @Get('wallet/transactions')
+  walletTransactions() {
+    return this.service.getWalletTransactions();
+  }
+
+  @Get('users/:userId')
+  getUserWithWallet(@Param('userId') userId: string) {
+    return this.service.getUserWithWallet(userId);
+  }
+
+  @Post('users')
+  createUser(@Body() body: { email: string; password: string; firstName?: string; lastName?: string }) {
+    return this.service.createUser(body.email, body.password, body.firstName, body.lastName);
+  }
+
+  @Patch('users/:userId/wallet')
+  updateUserWallet(
+    @Param('userId') userId: string,
+    @Body() body: { amount: number; operation: 'add' | 'subtract'; description?: string }
+  ) {
+    return this.service.updateUserWallet(userId, body.amount, body.operation, body.description);
   }
 
   @Delete('bookings/:bookingId')

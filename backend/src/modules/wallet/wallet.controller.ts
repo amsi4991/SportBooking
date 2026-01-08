@@ -13,6 +13,11 @@ export class WalletController {
     return this.service.getWallet(req.user.id);
   }
 
+  @Get('transactions')
+  getTransactions(@Req() req: any) {
+    return this.service.getTransactions(req.user.id);
+  }
+
   @Post('add')
   add(@Req() req: any, @Body() body: any) {
     return this.service.addCredit(req.user.id, body.amount);
