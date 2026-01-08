@@ -37,6 +37,11 @@ export class AdminController {
     return this.service.getUserWithWallet(userId);
   }
 
+  @Get('users/:userId/transactions')
+  getUserTransactions(@Param('userId') userId: string) {
+    return this.service.getUserTransactions(userId);
+  }
+
   @Post('users')
   createUser(@Body() body: { email: string; password: string; firstName?: string; lastName?: string }) {
     return this.service.createUser(body.email, body.password, body.firstName, body.lastName);

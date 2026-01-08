@@ -6,10 +6,10 @@ import {
   getAdminStats, 
   getAdminBookings, 
   deleteAdminBooking, 
-  getWalletTransactions,
   getAdminUsers,
   createUser,
-  updateUserWallet
+  updateUserWallet,
+  getUserTransactions
 } from '../services/admin';
 
 interface Booking {
@@ -55,7 +55,6 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
@@ -66,7 +65,9 @@ export default function Admin() {
   // Modal per modificare wallet
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [walletForm, setWalletForm] = useState({ amount: 0, operation: 'add' as 'add' | 'subtract', description: '' });
+  const [userTransactions, setUserTransactions] = useState<Transaction[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [walletForm, setWalletForm] = useState({ amount: 0, operation: 'add' as 'add' | 'subtract' | 'set', description: '' });
 
   useEffect(() => {
     loadAdminData();
@@ -74,15 +75,13 @@ export default function Admin() {
 
   async function loadAdminData() {
     try {
-      const [statsData, bookingsData, transactionsData, usersData] = await Promise.all([
+      const [statsData, bookingsData, usersData] = await Promise.all([
         getAdminStats(),
         getAdminBookings(),
-        getWalletTransactions(),
         getAdminUsers()
       ]);
       setStats(statsData);
       setBookings(bookingsData);
-      setTransactions(transactionsData);
       setUsers(usersData);
     } catch (error) {
       console.error('Errore nel caricamento dati admin:', error);
@@ -134,10 +133,26 @@ export default function Admin() {
       setMessage({ type: 'success', text: '✅ Wallet aggiornato!' });
       setShowWalletModal(false);
       setSelectedUser(null);
+      setUserTransactions([]);
       setWalletForm({ amount: 0, operation: 'add', description: '' });
       loadAdminData();
     } catch (error) {
       setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
+    }
+  }
+
+  async function openWalletModal(user: User) {
+    setSelectedUser(user);
+    setShowWalletModal(true);
+    setWalletForm({ amount: 0, operation: 'add', description: '' });
+    setLoadingTransactions(true);
+    try {
+      const txs = await getUserTransactions(user.id);
+      setUserTransactions(txs);
+    } catch (error) {
+      console.error('Errore nel caricamento transazioni:', error);
+    } finally {
+      setLoadingTransactions(false);
     }
   }
 
@@ -245,43 +260,6 @@ export default function Admin() {
           )}
         </div>
 
-        {/* Wallet Transactions */}
-        <div className="bg-white rounded-lg shadow-md p-8 mt-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Cronologia transazioni portafoglio</h2>
-
-          {transactions.length === 0 ? (
-            <p className="text-gray-500">Nessuna transazione</p>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {transactions.map((tx) => {
-                const date = new Date(tx.createdAt);
-                const isDeposit = tx.type === 'deposit' || tx.type === 'refund';
-                const icon = isDeposit ? ArrowDownLeftIcon : ArrowUpRightIcon;
-                const Icon = icon;
-
-                return (
-                  <div key={tx.id} className="flex items-center justify-between border-b border-gray-200 pb-3 hover:bg-gray-50 px-3 py-2 rounded">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${isDeposit ? 'bg-green-100' : 'bg-red-100'}`}>
-                        <Icon className={`h-5 w-5 ${isDeposit ? 'text-green-600' : 'text-red-600'}`} />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{tx.description}</p>
-                        <p className="text-sm text-gray-600">
-                          {tx.user.email} • {date.toLocaleDateString('it-IT')} {date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </div>
-                    <p className={`font-bold text-lg ${isDeposit ? 'text-green-600' : 'text-red-600'}`}>
-                      {isDeposit ? '+' : '-'}€{(tx.amount / 100).toFixed(2)}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
         {/* Gestione Utenti */}
         <div className="bg-white rounded-lg shadow-md p-8 mt-8">
           <div className="flex items-center justify-between mb-6">
@@ -371,11 +349,7 @@ export default function Admin() {
                     </td>
                     <td className="py-3 px-4">
                       <button
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setShowWalletModal(true);
-                          setWalletForm({ amount: 0, operation: 'add', description: '' });
-                        }}
+                        onClick={() => openWalletModal(user)}
                         className="bg-green-50 hover:bg-green-100 text-green-600 px-3 py-2 rounded-md text-sm font-medium transition"
                       >
                         Gestisci wallet
@@ -415,25 +389,33 @@ export default function Admin() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Operazione</label>
                   <select
                     value={walletForm.operation}
-                    onChange={(e) => setWalletForm({ ...walletForm, operation: e.target.value as 'add' | 'subtract' })}
+                    onChange={(e) => setWalletForm({ ...walletForm, operation: e.target.value as 'add' | 'subtract' | 'set' })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                   >
                     <option value="add">Aggiungi credito (+)</option>
                     <option value="subtract">Decurta credito (-)</option>
+                    <option value="set">Imposta saldo diretto</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Importo (€)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {walletForm.operation === 'set' ? 'Nuovo saldo (€)' : 'Importo (€)'}
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
-                    placeholder="0.00"
+                    placeholder={walletForm.operation === 'set' ? '0.00' : '0.00'}
                     value={walletForm.amount}
                     onChange={(e) => setWalletForm({ ...walletForm, amount: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                   />
+                  {walletForm.operation === 'set' && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Saldo attuale: €{selectedUser.wallet ? (selectedUser.wallet.balance / 100).toFixed(2) : '0.00'}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -458,11 +440,48 @@ export default function Admin() {
                     onClick={() => {
                       setShowWalletModal(false);
                       setSelectedUser(null);
+                      setUserTransactions([]);
                     }}
                     className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-900 px-4 py-2 rounded-md font-medium transition"
                   >
                     Annulla
                   </button>
+                </div>
+
+                {/* Transaction History */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-3">Cronologia transazioni</h4>
+                  {loadingTransactions ? (
+                    <p className="text-gray-500 text-sm">Caricamento...</p>
+                  ) : userTransactions.length === 0 ? (
+                    <p className="text-gray-500 text-sm">Nessuna transazione</p>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {userTransactions.map((tx) => {
+                        const date = new Date(tx.createdAt);
+                        const isDeposit = tx.type === 'deposit' || tx.type === 'refund';
+                        const icon = isDeposit ? ArrowDownLeftIcon : ArrowUpRightIcon;
+                        const Icon = icon;
+
+                        return (
+                          <div key={tx.id} className="flex items-center justify-between text-sm border-b border-gray-100 pb-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`p-1 rounded-full ${isDeposit ? 'bg-green-100' : 'bg-red-100'}`}>
+                                <Icon className={`h-4 w-4 ${isDeposit ? 'text-green-600' : 'text-red-600'}`} />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{tx.description}</p>
+                                <p className="text-xs text-gray-600">{date.toLocaleDateString('it-IT')} {date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</p>
+                              </div>
+                            </div>
+                            <p className={`font-bold ${isDeposit ? 'text-green-600' : 'text-red-600'}`}>
+                              {isDeposit ? '+' : '-'}€{(tx.amount / 100).toFixed(2)}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

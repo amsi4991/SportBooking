@@ -7,8 +7,8 @@ export class UpdateWalletDto {
   @Min(0.01)
   amount: number;
 
-  @IsEnum(['add', 'subtract'])
-  operation: 'add' | 'subtract';
+  @IsEnum(['add', 'subtract', 'set'])
+  operation: 'add' | 'subtract' | 'set';
 
   @IsOptional()
   @IsString()

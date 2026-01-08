@@ -84,6 +84,22 @@ export class AdminService {
     });
   }
 
+  async getUserTransactions(userId: string, limit: number = 50) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      throw new NotFoundException('Utente non trovato');
+    }
+
+    return this.prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+  }
+
   async createUser(email: string, password: string, firstName?: string, lastName?: string) {
     // Verifica che l'email non esista già
     const existingUser = await this.prisma.user.findUnique({
@@ -124,17 +140,17 @@ export class AdminService {
     };
   }
 
-  async updateUserWallet(userId: string, amount: number, operation: 'add' | 'subtract', description?: string) {
+  async updateUserWallet(userId: string, amount: number, operation: 'add' | 'subtract' | 'set', description?: string) {
     // Validazione input
     if (!userId) {
       throw new BadRequestException('User ID mancante');
     }
 
-    if (!amount || amount <= 0) {
+    if (!amount || amount < 0) {
       throw new BadRequestException('Importo non valido');
     }
 
-    if (!operation || !['add', 'subtract'].includes(operation)) {
+    if (!operation || !['add', 'subtract', 'set'].includes(operation)) {
       throw new BadRequestException('Operazione non valida');
     }
 
@@ -161,7 +177,20 @@ export class AdminService {
 
     let updatedWallet;
     try {
-      if (operation === 'add') {
+      if (operation === 'set') {
+        // Calcola la differenza tra il nuovo saldo e il saldo attuale
+        const difference = amountInCents - user.wallet.balance;
+        if (difference > 0) {
+          // Se la differenza è positiva, aggiungi credito
+          updatedWallet = await this.wallet.addCredit(userId, difference, description || `Saldo impostato a €${amount.toFixed(2)} da admin`);
+        } else if (difference < 0) {
+          // Se la differenza è negativa, decurta credito
+          updatedWallet = await this.wallet.spend(userId, Math.abs(difference), description || `Saldo impostato a €${amount.toFixed(2)} da admin`);
+        } else {
+          // Se la differenza è 0, non fare nulla
+          updatedWallet = user.wallet;
+        }
+      } else if (operation === 'add') {
         updatedWallet = await this.wallet.addCredit(userId, amountInCents, description || 'Caricamento credito da admin');
       } else {
         updatedWallet = await this.wallet.spend(userId, amountInCents, description || 'Decurtazione credito da admin');

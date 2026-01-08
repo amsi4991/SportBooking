@@ -32,6 +32,10 @@ export async function getUserWithWallet(userId: string) {
   return apiFetch(`/admin/users/${userId}`);
 }
 
+export async function getUserTransactions(userId: string) {
+  return apiFetch(`/admin/users/${userId}/transactions`);
+}
+
 export async function updateUserWallet(userId: string, amount: number, operation: 'add' | 'subtract', description?: string) {
   return apiFetch(`/admin/users/${userId}/wallet`, {
     method: 'PATCH',
