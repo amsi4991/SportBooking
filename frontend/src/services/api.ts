@@ -14,5 +14,12 @@ export async function apiFetch(url: string, options: any = {}) {
     window.location.href = '/';
   }
 
-  return res.json();
+  const data = await res.json();
+  
+  if (!res.ok) {
+    const errorMsg = data.message || data.error || JSON.stringify(data);
+    throw new Error(errorMsg);
+  }
+
+  return data;
 }

@@ -1,8 +1,8 @@
 
 import { apiFetch } from './api';
 
-export async function getBookings() {
-  return apiFetch('/admin/bookings');
+export async function getBookingsByCourtId(courtId: string) {
+  return apiFetch(`/bookings/court/${courtId}`);
 }
 
 export async function createBooking(data: any) {

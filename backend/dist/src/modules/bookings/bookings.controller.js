@@ -20,11 +20,21 @@ let BookingsController = class BookingsController {
     constructor(service) {
         this.service = service;
     }
+    async getByCourtId(courtId) {
+        return this.service.getBookingsByCourtId(courtId);
+    }
     async create(req, body) {
         return this.service.createBooking(req.user.id, body.courtId, new Date(body.startsAt), new Date(body.endsAt));
     }
 };
 exports.BookingsController = BookingsController;
+__decorate([
+    (0, common_1.Get)('court/:courtId'),
+    __param(0, (0, common_1.Param)('courtId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], BookingsController.prototype, "getByCourtId", null);
 __decorate([
     (0, common_1.Post)(),
     __param(0, (0, common_1.Req)()),

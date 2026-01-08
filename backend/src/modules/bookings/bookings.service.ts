@@ -15,6 +15,16 @@ export class BookingsService {
     private pricing: PricingService
   ) { }
 
+  async getBookingsByCourtId(courtId: string) {
+    return this.prisma.booking.findMany({
+      where: { courtId },
+      include: {
+        court: true,
+        user: true
+      }
+    });
+  }
+
   async createBooking(userId: string, courtId: string, startsAt: Date, endsAt: Date) {
     const lockKey = `lock:${courtId}:${startsAt.toISOString()}:${endsAt.toISOString()}`;
     const result = await this.redis.set(

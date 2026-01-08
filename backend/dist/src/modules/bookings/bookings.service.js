@@ -25,6 +25,15 @@ let BookingsService = class BookingsService {
         this.pricing = pricing;
         this.redis = new ioredis_1.default(process.env.REDIS_URL || 'redis://redis:6379');
     }
+    async getBookingsByCourtId(courtId) {
+        return this.prisma.booking.findMany({
+            where: { courtId },
+            include: {
+                court: true,
+                user: true
+            }
+        });
+    }
     async createBooking(userId, courtId, startsAt, endsAt) {
         const lockKey = `lock:${courtId}:${startsAt.toISOString()}:${endsAt.toISOString()}`;
         const result = await this.redis.set(lockKey, '1', 'EX', 30, 'NX');

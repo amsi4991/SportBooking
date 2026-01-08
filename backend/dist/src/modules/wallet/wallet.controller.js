@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WalletController = void 0;
 const common_1 = require("@nestjs/common");
 const wallet_service_1 = require("./wallet.service");
+const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
 let WalletController = class WalletController {
     constructor(service) {
         this.service = service;
@@ -44,5 +45,6 @@ __decorate([
 ], WalletController.prototype, "add", null);
 exports.WalletController = WalletController = __decorate([
     (0, common_1.Controller)('wallet'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [wallet_service_1.WalletService])
 ], WalletController);
