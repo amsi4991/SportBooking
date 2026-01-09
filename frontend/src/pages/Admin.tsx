@@ -1036,14 +1036,43 @@ export default function Admin() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">URL Immagine</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={courtForm.image}
-                    onChange={(e) => setCourtForm({ ...courtForm, image: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Immagine</label>
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const base64String = event.target?.result as string;
+                            setCourtForm({ ...courtForm, image: base64String });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <p className="text-xs text-gray-500">Oppure inserisci un URL:</p>
+                    <input
+                      type="text"
+                      placeholder="https://..."
+                      value={courtForm.image && courtForm.image.startsWith('data:') ? '' : courtForm.image}
+                      onChange={(e) => setCourtForm({ ...courtForm, image: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    {courtForm.image && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-600 mb-1">Anteprima:</p>
+                        <img 
+                          src={courtForm.image} 
+                          alt="Preview" 
+                          className="h-24 w-24 object-cover rounded-md border border-gray-300"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Sezione Prezzi */}

@@ -6,6 +6,10 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  // Aumenta il limite di dimensione del payload per le immagini in base64
+  app.use(require('express').json({ limit: '50mb' }));
+  app.use(require('express').urlencoded({ limit: '50mb', extended: true }));
+  
   // Abilita la validazione globale
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
