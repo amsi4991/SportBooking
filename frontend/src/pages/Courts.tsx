@@ -3,6 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import { MagnifyingGlassIcon, MapPinIcon, TicketIcon } from '@heroicons/react/24/outline';
 
+const DAYS_OF_WEEK = [
+  { label: 'Lunedì', value: 0 },
+  { label: 'Martedì', value: 1 },
+  { label: 'Mercoledì', value: 2 },
+  { label: 'Giovedì', value: 3 },
+  { label: 'Venerdì', value: 4 },
+  { label: 'Sabato', value: 5 },
+  { label: 'Domenica', value: 6 }
+];
+
+interface PriceRule {
+  id: string;
+  weekdays: number[];
+  startTime: string;
+  endTime: string;
+  price: number;
+}
+
 interface Court {
   id: string;
   name: string;
@@ -10,7 +28,7 @@ interface Court {
   sport: string;
   description: string;
   image: string;
-  priceRules: Array<{ price: number }>;
+  priceRules: PriceRule[];
 }
 
 export default function Courts() {
@@ -134,9 +152,30 @@ export default function Courts() {
                   {/* Price */}
                   {court.priceRules.length > 0 && (
                     <div className="pt-4 border-t border-gray-200">
-                      <p className="text-lg font-bold text-blue-600">
-                        €{(court.priceRules[0].price / 100).toFixed(2)} / ora
-                      </p>
+                      {court.priceRules.length === 1 ? (
+                        <div>
+                          <p className="text-lg font-bold text-blue-600">
+                            €{(court.priceRules[0].price / 100).toFixed(2)} / ora
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {court.priceRules[0].weekdays.map(d => DAYS_OF_WEEK.find(day => day.value === d)?.label).join(', ')} {court.priceRules[0].startTime}-{court.priceRules[0].endTime}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm font-semibold text-gray-900 mb-2">Fasce orarie:</p>
+                          <div className="space-y-2">
+                            {court.priceRules.map((rule, idx) => (
+                              <div key={idx} className="text-sm bg-blue-50 p-2 rounded">
+                                <p className="font-bold text-blue-600">€{(rule.price / 100).toFixed(2)}/h</p>
+                                <p className="text-xs text-gray-600">
+                                  {rule.weekdays.map(d => DAYS_OF_WEEK.find(day => day.value === d)?.label).join(', ')} {rule.startTime}-{rule.endTime}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 

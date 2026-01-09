@@ -99,14 +99,14 @@ model RefreshToken {
 model PriceRule {
   id        String   @id @default(uuid()) @db.Uuid
   courtId   String   @db.Uuid
-  weekday   Int
-  startTime DateTime
-  endTime   DateTime
+  weekdays  Int[]    // Array di numeri: 0=lunedì, 1=martedì, ..., 6=domenica
+  startTime String   // HH:mm format (es: "08:00")
+  endTime   String   // HH:mm format (es: "12:00")
   price     Int
 
   court Court @relation(fields: [courtId], references: [id])
 
-  @@index([courtId, weekday])
+  @@index([courtId])
 }
 
 enum TransactionType {

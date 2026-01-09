@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
@@ -18,8 +18,7 @@ export class CourtsService {
       },
       include: {
         priceRules: {
-          take: 1,
-          orderBy: { price: 'asc' }
+          orderBy: [{ startTime: 'asc' }]
         }
       }
     });
@@ -71,5 +70,99 @@ export class CourtsService {
     }
 
     return slots;
+  }
+
+  async createCourt(data: {
+    name: string;
+    city: string;
+    sport: string;
+    description?: string;
+    image?: string;
+  }) {
+    return this.prisma.court.create({
+      data: {
+        name: data.name,
+        city: data.city,
+        sport: data.sport,
+        description: data.description,
+        image: data.image
+      }
+    });
+  }
+
+  async updateCourt(id: string, data: {
+    name?: string;
+    city?: string;
+    sport?: string;
+    description?: string;
+    image?: string;
+  }) {
+    const court = await this.prisma.court.findUnique({ where: { id } });
+    if (!court) {
+      throw new NotFoundException('Campo non trovato');
+    }
+
+    return this.prisma.court.update({
+      where: { id },
+      data
+    });
+  }
+
+  async deleteCourt(id: string) {
+    const court = await this.prisma.court.findUnique({ where: { id } });
+    if (!court) {
+      throw new NotFoundException('Campo non trovato');
+    }
+
+    // Elimina tutte le prenotazioni associate
+    await this.prisma.booking.deleteMany({ where: { courtId: id } });
+
+    // Elimina tutti i blocchi associati
+    await this.prisma.courtBlock.deleteMany({ where: { courtId: id } });
+
+    // Elimina tutte le regole di prezzo associate
+    await this.prisma.priceRule.deleteMany({ where: { courtId: id } });
+
+    // Elimina il campo
+    return this.prisma.court.delete({ where: { id } });
+  }
+
+  async createPriceRule(courtId: string, data: {
+    weekdays: number[];
+    startTime: string;
+    endTime: string;
+    price: number;
+  }) {
+    const court = await this.prisma.court.findUnique({ where: { id: courtId } });
+    if (!court) {
+      throw new NotFoundException('Campo non trovato');
+    }
+
+    // Salva direttamente in formato HH:mm
+    return this.prisma.priceRule.create({
+      data: {
+        courtId,
+        weekdays: data.weekdays,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        price: data.price
+      }
+    });
+  }
+
+  async getPriceRules(courtId: string) {
+    return this.prisma.priceRule.findMany({
+      where: { courtId },
+      orderBy: [{ startTime: 'asc' }]
+    });
+  }
+
+  async deletePriceRule(ruleId: string) {
+    const rule = await this.prisma.priceRule.findUnique({ where: { id: ruleId } });
+    if (!rule) {
+      throw new NotFoundException('Regola di prezzo non trovata');
+    }
+
+    return this.prisma.priceRule.delete({ where: { id: ruleId } });
   }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-import { TrashIcon, SparklesIcon, ArrowUpRightIcon, ArrowDownLeftIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, SparklesIcon, ArrowUpRightIcon, ArrowDownLeftIcon, PlusIcon, XMarkIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { 
   getAdminStats, 
   getAdminBookings, 
@@ -11,6 +11,7 @@ import {
   updateUserWallet,
   getUserTransactions
 } from '../services/admin';
+import { getAllCourts, createCourt, updateCourt, deleteCourt, Court, getPriceRules, createPriceRule, deletePriceRule, DAYS_OF_WEEK, PriceRule } from '../services/courts';
 
 interface Booking {
   id: string;
@@ -55,12 +56,21 @@ export default function Admin() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [courts, setCourts] = useState<Court[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   // Form per creare nuovo utente
   const [showCreateUserForm, setShowCreateUserForm] = useState(false);
   const [newUserForm, setNewUserForm] = useState({ email: '', password: '', firstName: '', lastName: '' });
+  
+  // Modal per gestire campi
+  const [showCourtModal, setShowCourtModal] = useState(false);
+  const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
+  const [courtForm, setCourtForm] = useState({ name: '', city: '', sport: '', description: '', image: '' });
+  const [priceRules, setPriceRules] = useState<PriceRule[]>([]);
+  const [showPriceForm, setShowPriceForm] = useState(false);
+  const [priceForm, setPriceForm] = useState({ weekdays: [] as number[], startTime: '08:00', endTime: '12:00', price: 0 });
   
   // Modal per modificare wallet
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -75,14 +85,16 @@ export default function Admin() {
 
   async function loadAdminData() {
     try {
-      const [statsData, bookingsData, usersData] = await Promise.all([
+      const [statsData, bookingsData, usersData, courtsData] = await Promise.all([
         getAdminStats(),
         getAdminBookings(),
-        getAdminUsers()
+        getAdminUsers(),
+        getAllCourts()
       ]);
       setStats(statsData);
       setBookings(bookingsData);
       setUsers(usersData);
+      setCourts(courtsData);
     } catch (error) {
       console.error('Errore nel caricamento dati admin:', error);
       setMessage({ type: 'error', text: '❌ Errore nel caricamento dati' });
@@ -153,6 +165,108 @@ export default function Admin() {
       console.error('Errore nel caricamento transazioni:', error);
     } finally {
       setLoadingTransactions(false);
+    }
+  }
+
+  async function handleSaveCourt() {
+    if (!courtForm.name || !courtForm.city || !courtForm.sport) {
+      setMessage({ type: 'error', text: '❌ Nome, città e sport sono obbligatori' });
+      return;
+    }
+
+    try {
+      if (selectedCourt) {
+        // Modifica
+        await updateCourt(selectedCourt.id, courtForm);
+        setMessage({ type: 'success', text: '✅ Campo aggiornato!' });
+      } else {
+        // Crea
+        await createCourt(courtForm);
+        setMessage({ type: 'success', text: '✅ Campo creato!' });
+      }
+      setShowCourtModal(false);
+      setSelectedCourt(null);
+      setCourtForm({ name: '', city: '', sport: '', description: '', image: '' });
+      loadAdminData();
+    } catch (error) {
+      setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
+    }
+  }
+
+  function openCourtModal(court?: Court) {
+    if (court) {
+      setSelectedCourt(court);
+      setCourtForm({
+        name: court.name,
+        city: court.city,
+        sport: court.sport,
+        description: court.description || '',
+        image: court.image || ''
+      });
+      // Carica i prezzi
+      loadPriceRules(court.id);
+    } else {
+      setSelectedCourt(null);
+      setCourtForm({ name: '', city: '', sport: '', description: '', image: '' });
+      setPriceRules([]);
+    }
+    setShowPriceForm(false);
+    setPriceForm({ weekdays: [], startTime: '08:00', endTime: '12:00', price: 0 });
+    setShowCourtModal(true);
+  }
+
+  async function loadPriceRules(courtId: string) {
+    try {
+      const rules = await getPriceRules(courtId);
+      setPriceRules(rules);
+    } catch (error) {
+      console.error('Errore caricamento prezzi:', error);
+    }
+  }
+
+  async function handleAddPrice() {
+    if (!selectedCourt || priceForm.weekdays.length === 0) return;
+
+    try {
+      await createPriceRule(
+        selectedCourt.id,
+        priceForm.weekdays,
+        priceForm.startTime,
+        priceForm.endTime,
+        Math.round(priceForm.price * 100) // Converti euro a centesimi
+      );
+      setMessage({ type: 'success', text: '✅ Fascia oraria aggiunta!' });
+      setPriceForm({ weekdays: [], startTime: '08:00', endTime: '12:00', price: 0 });
+      setShowPriceForm(false);
+      loadPriceRules(selectedCourt.id);
+    } catch (error) {
+      setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
+    }
+  }
+
+  async function handleDeletePrice(ruleId: string) {
+    if (!selectedCourt) return;
+
+    try {
+      await deletePriceRule(selectedCourt.id, ruleId);
+      setMessage({ type: 'success', text: '✅ Fascia oraria eliminata!' });
+      loadPriceRules(selectedCourt.id);
+    } catch (error) {
+      setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
+    }
+  }
+
+  async function handleDeleteCourt(courtId: string) {
+    if (!confirm('Sei sicuro di voler eliminare questo campo? Tutte le prenotazioni associate verranno eliminate.')) {
+      return;
+    }
+
+    try {
+      await deleteCourt(courtId);
+      setMessage({ type: 'success', text: '✅ Campo eliminato!' });
+      loadAdminData();
+    } catch (error) {
+      setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
     }
   }
 
@@ -488,6 +602,267 @@ export default function Admin() {
                       })}
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Gestione Campi */}
+        <div className="bg-white rounded-lg shadow-md p-8 mt-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Gestione campi</h2>
+            <button
+              onClick={() => openCourtModal()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium flex items-center gap-2 transition"
+            >
+              <PlusIcon className="h-5 w-5" />
+              Nuovo campo
+            </button>
+          </div>
+
+          {courts.length === 0 ? (
+            <p className="text-gray-500">Nessun campo</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {courts.map((court) => (
+                <div key={court.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                  {court.image && (
+                    <img src={court.image} alt={court.name} className="w-full h-40 object-cover rounded-md mb-3" />
+                  )}
+                  <h3 className="font-bold text-gray-900 text-lg">{court.name}</h3>
+                  <p className="text-sm text-gray-600">📍 {court.city} • ⚽ {court.sport}</p>
+                  {court.description && (
+                    <p className="text-sm text-gray-600 mt-2 line-clamp-2">{court.description}</p>
+                  )}
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={() => openCourtModal(court)}
+                      className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition flex items-center justify-center gap-2"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                      Modifica
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCourt(court.id)}
+                      className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-md text-sm font-medium transition"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Modal Gestione Campi */}
+        {showCourtModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {selectedCourt ? 'Modifica Campo' : 'Nuovo Campo'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCourtModal(false);
+                    setSelectedCourt(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                  <input
+                    type="text"
+                    placeholder="Es: Campo Centrale"
+                    value={courtForm.name}
+                    onChange={(e) => setCourtForm({ ...courtForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Città *</label>
+                  <input
+                    type="text"
+                    placeholder="Es: Milano"
+                    value={courtForm.city}
+                    onChange={(e) => setCourtForm({ ...courtForm, city: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sport *</label>
+                  <input
+                    type="text"
+                    placeholder="Es: Calcio"
+                    value={courtForm.sport}
+                    onChange={(e) => setCourtForm({ ...courtForm, sport: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
+                  <textarea
+                    placeholder="Descrizione del campo..."
+                    value={courtForm.description}
+                    onChange={(e) => setCourtForm({ ...courtForm, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">URL Immagine</label>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={courtForm.image}
+                    onChange={(e) => setCourtForm({ ...courtForm, image: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+
+                {/* Sezione Prezzi */}
+                {selectedCourt && (
+                  <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-gray-900">Fasce orarie e prezzi</h4>
+                      <button
+                        onClick={() => setShowPriceForm(!showPriceForm)}
+                        className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-2 py-1 rounded text-sm font-medium transition"
+                      >
+                        <PlusIcon className="h-4 w-4 inline mr-1" />
+                        Aggiungi
+                      </button>
+                    </div>
+
+                    {showPriceForm && (
+                      <div className="bg-blue-50 p-3 rounded-md mb-3 space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2">Giorni della settimana</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {DAYS_OF_WEEK.map(day => (
+                              <label key={day.value} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={priceForm.weekdays.includes(day.value)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setPriceForm({ ...priceForm, weekdays: [...priceForm.weekdays, day.value].sort((a, b) => a - b) });
+                                    } else {
+                                      setPriceForm({ ...priceForm, weekdays: priceForm.weekdays.filter(d => d !== day.value) });
+                                    }
+                                  }}
+                                  className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                                />
+                                <span className="text-sm text-gray-700">{day.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Inizio</label>
+                            <input
+                              type="time"
+                              value={priceForm.startTime}
+                              onChange={(e) => setPriceForm({ ...priceForm, startTime: e.target.value })}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Fine</label>
+                            <input
+                              type="time"
+                              value={priceForm.endTime}
+                              onChange={(e) => setPriceForm({ ...priceForm, endTime: e.target.value })}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Prezzo (€)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            value={priceForm.price}
+                            onChange={(e) => setPriceForm({ ...priceForm, price: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleAddPrice}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-sm font-medium transition"
+                          >
+                            Aggiungi
+                          </button>
+                          <button
+                            onClick={() => setShowPriceForm(false)}
+                            className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-900 px-2 py-1 rounded text-sm font-medium transition"
+                          >
+                            Annulla
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {priceRules.length === 0 ? (
+                      <p className="text-xs text-gray-500">Nessuna fascia oraria configurata</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {priceRules.map((rule) => {
+                          const dayNames = rule.weekdays.map(d => DAYS_OF_WEEK.find(day => day.value === d)?.label || `Giorno ${d}`).join(', ');
+                          return (
+                            <div key={rule.id} className="flex items-center justify-between bg-gray-50 p-2 rounded text-sm">
+                              <div>
+                                <p className="font-medium text-gray-900">{dayNames}</p>
+                                <p className="text-xs text-gray-600">{rule.startTime} - {rule.endTime}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-green-600">€{(rule.price / 100).toFixed(2)}</span>
+                                <button
+                                  onClick={() => handleDeletePrice(rule.id)}
+                                  className="text-red-600 hover:text-red-700 p-1"
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-4">
+                  <button
+                    onClick={handleSaveCourt}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium transition"
+                  >
+                    Salva
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowCourtModal(false);
+                      setSelectedCourt(null);
+                    }}
+                    className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-900 px-4 py-2 rounded-md font-medium transition"
+                  >
+                    Annulla
+                  </button>
                 </div>
               </div>
             </div>

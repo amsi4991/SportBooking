@@ -5,6 +5,24 @@ import { ArrowLeftIcon, MapPinIcon, StarIcon, LockClosedIcon } from '@heroicons/
 import BlockCourtModal from '../components/BlockCourtModal';
 import { getBlocksByCourtId, CourtBlock } from '../services/court-blocks';
 
+const DAYS_OF_WEEK = [
+  { label: 'Lunedì', value: 0 },
+  { label: 'Martedì', value: 1 },
+  { label: 'Mercoledì', value: 2 },
+  { label: 'Giovedì', value: 3 },
+  { label: 'Venerdì', value: 4 },
+  { label: 'Sabato', value: 5 },
+  { label: 'Domenica', value: 6 }
+];
+
+interface PriceRule {
+  id: string;
+  price: number;
+  weekdays: number[];
+  startTime: string;
+  endTime: string;
+}
+
 interface Court {
   id: string;
   name: string;
@@ -12,7 +30,7 @@ interface Court {
   sport: string;
   description: string;
   image: string;
-  priceRules: Array<{ id: string; price: number; weekday: number }>;
+  priceRules: PriceRule[];
 }
 
 interface Slot {
@@ -166,11 +184,41 @@ export default function CourtDetail() {
             {/* Price */}
             {court.priceRules.length > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-                <p className="text-sm text-gray-600 mb-2">Prezzo</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  €{(court.priceRules[0].price / 100).toFixed(2)}
-                </p>
-                <p className="text-sm text-gray-600 mt-2">per ora</p>
+                {court.priceRules.length === 1 ? (
+                  <>
+                    <p className="text-sm text-gray-600 mb-2">Prezzo</p>
+                    <p className="text-3xl font-bold text-blue-600">
+                      €{(court.priceRules[0].price / 100).toFixed(2)}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-2">per ora</p>
+                    <p className="text-xs text-gray-600 mt-3">
+                      {court.priceRules[0].weekdays.map(d => DAYS_OF_WEEK.find(day => day.value === d)?.label).join(', ')} {court.priceRules[0].startTime}-{court.priceRules[0].endTime}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600 mb-4 font-semibold">Fasce orarie e prezzi</p>
+                    <div className="space-y-3">
+                      {court.priceRules.map((rule) => (
+                        <div key={rule.id} className="bg-white p-3 rounded-lg border border-blue-100">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {rule.weekdays.map(d => DAYS_OF_WEEK.find(day => day.value === d)?.label).join(', ')}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {rule.startTime} - {rule.endTime}
+                              </p>
+                            </div>
+                            <p className="text-xl font-bold text-blue-600">
+                              €{(rule.price / 100).toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

@@ -88,9 +88,11 @@ async function main() {
   await prisma.priceRule.deleteMany({});
   await prisma.priceRule.createMany({
     data: [
-      { courtId: court1.id, weekday: 1, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 5000 },
-      { courtId: court2.id, weekday: 1, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 6000 },
-      { courtId: court3.id, weekday: 1, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 4000 },
+      { courtId: court1.id, weekdays: [0, 1, 2, 3, 4], startTime: '06:00', endTime: '23:00', price: 5000 },
+      { courtId: court1.id, weekdays: [5, 6], startTime: '06:00', endTime: '23:00', price: 7500 },
+      { courtId: court2.id, weekdays: [0, 1, 2, 3, 4], startTime: '06:00', endTime: '23:00', price: 6000 },
+      { courtId: court2.id, weekdays: [5, 6], startTime: '06:00', endTime: '23:00', price: 8000 },
+      { courtId: court3.id, weekdays: [0, 1, 2, 3, 4, 5, 6], startTime: '06:00', endTime: '23:00', price: 4000 },
     ]
   });
 

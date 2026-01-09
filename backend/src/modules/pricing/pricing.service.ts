@@ -12,13 +12,26 @@ export class PricingService {
     const durationHours = durationMs / (1000 * 60 * 60);
 
     // Prova a trovare una regola di prezzo per il giorno specifico
-    const weekday = startsAt.getUTCDay();
+    const weekday = startsAt.getDay();
+    const adjustedWeekday = weekday === 0 ? 6 : weekday - 1; // Converti a 0=lunedì, 6=domenica
+
+    // Converti l'orario della prenotazione a HH:mm
+    const bookingHour = String(startsAt.getHours()).padStart(2, '0');
+    const bookingMin = String(startsAt.getMinutes()).padStart(2, '0');
+    const bookingTime = `${bookingHour}:${bookingMin}`;
+
+    const endHour = String(endsAt.getHours()).padStart(2, '0');
+    const endMin = String(endsAt.getMinutes()).padStart(2, '0');
+    const endTime = `${endHour}:${endMin}`;
+
     const rule = await this.prisma.priceRule.findFirst({
       where: {
         courtId,
-        weekday,
-        startTime: { lte: startsAt },
-        endTime: { gte: endsAt }
+        weekdays: {
+          has: adjustedWeekday
+        },
+        startTime: { lte: bookingTime },
+        endTime: { gte: endTime }
       }
     });
 

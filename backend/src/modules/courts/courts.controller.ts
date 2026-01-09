@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Post, Delete, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Param, Query, Post, Delete, Body, UseGuards, Req, Put } from '@nestjs/common';
 import { CourtsService } from './courts.service';
 import { CourtBlocksService } from './court-blocks.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -62,5 +62,53 @@ export class CourtsController {
   @Roles('admin')
   async deleteBlock(@Param('blockId') blockId: string) {
     return this.blocksService.deleteBlock(blockId);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async createCourt(
+    @Body() body: { name: string; city: string; sport: string; description?: string; image?: string }
+  ) {
+    return this.service.createCourt(body);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async updateCourt(
+    @Param('id') id: string,
+    @Body() body: { name?: string; city?: string; sport?: string; description?: string; image?: string }
+  ) {
+    return this.service.updateCourt(id, body);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async deleteCourt(@Param('id') id: string) {
+    return this.service.deleteCourt(id);
+  }
+
+  @Post(':courtId/prices')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async createPriceRule(
+    @Param('courtId') courtId: string,
+    @Body() body: { weekdays: number[]; startTime: string; endTime: string; price: number }
+  ) {
+    return this.service.createPriceRule(courtId, body);
+  }
+
+  @Get(':courtId/prices')
+  async getPriceRules(@Param('courtId') courtId: string) {
+    return this.service.getPriceRules(courtId);
+  }
+
+  @Delete(':courtId/prices/:ruleId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async deletePriceRule(@Param('ruleId') ruleId: string) {
+    return this.service.deletePriceRule(ruleId);
   }
 }
