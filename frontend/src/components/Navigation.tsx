@@ -1,7 +1,8 @@
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeftOnRectangleIcon, WalletIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftOnRectangleIcon, WalletIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { getSettings, AppSettings } from '../services/settings';
 
 function decodeToken(token: string) {
   try {
@@ -20,6 +21,7 @@ function decodeToken(token: string) {
 export default function Navigation() {
   const { logout, walletBalance, refreshWallet } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [brandSettings, setBrandSettings] = useState<{ icon: string; name: string } | null>(null);
 
   useEffect(() => {
     // Check if user is admin by decoding JWT
@@ -41,6 +43,9 @@ export default function Navigation() {
       console.log('No token found in localStorage');
     }
 
+    // Carica impostazioni brand dal backend
+    loadBrandSettings();
+
     // Ascolta evento di aggiornamento wallet
     const handleWalletUpdate = () => {
       refreshWallet();
@@ -49,6 +54,17 @@ export default function Navigation() {
     window.addEventListener('walletUpdated', handleWalletUpdate);
     return () => window.removeEventListener('walletUpdated', handleWalletUpdate);
   }, [refreshWallet]);
+
+  async function loadBrandSettings() {
+    try {
+      const settings = await getSettings();
+      if (settings.brandSettings) {
+        setBrandSettings(settings.brandSettings);
+      }
+    } catch (error) {
+      console.error('Errore caricamento brand settings:', error);
+    }
+  }
 
   const handleLogout = () => {
     logout();
@@ -60,8 +76,12 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-3">
-            <div className="text-2xl font-bold text-blue-600">⚽</div>
-            <h1 className="text-xl font-bold text-gray-900">SportBook</h1>
+            {brandSettings && (
+              <>
+                <div className="text-2xl font-bold text-blue-600">{brandSettings.icon}</div>
+                <h1 className="text-xl font-bold text-gray-900">{brandSettings.name}</h1>
+              </>
+            )}
           </div>
 
           <div className="hidden md:flex items-center gap-6">
@@ -75,8 +95,7 @@ export default function Navigation() {
               Profilo
             </Link>
             {isAdmin && (
-              <Link to="/admin" className="flex items-center gap-2 text-purple-600 hover:text-purple-700 font-medium transition-colors">
-                <SparklesIcon className="h-5 w-5" />
+              <Link to="/admin" className="text-purple-600 hover:text-purple-700 font-medium transition-colors">
                 Admin
               </Link>
             )}

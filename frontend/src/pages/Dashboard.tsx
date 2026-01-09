@@ -2,6 +2,7 @@ import BookingCalendar from '../components/BookingCalendar';
 import Navigation from '../components/Navigation';
 import { CalendarIcon, MapPinIcon, ClockIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
+import { getSettings } from '../services/settings';
 
 interface Court {
   id: string;
@@ -10,11 +11,20 @@ interface Court {
   sport: string;
 }
 
+interface DashboardSettings {
+  availabilityText: string;
+  hoursText: string;
+}
+
 export default function Dashboard() {
   const [courts, setCourts] = useState<Court[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [viewMode, setViewMode] = useState<'all' | 'single'>('all');
   const [selectedCourtId, setSelectedCourtId] = useState<string>('');
+  const [settings, setSettings] = useState<DashboardSettings>({
+    availabilityText: '7 giorni a settimana',
+    hoursText: '06:00 - 22:00'
+  });
 
   useEffect(() => {
     // Verifica se l'utente è admin
@@ -28,8 +38,21 @@ export default function Dashboard() {
       }
     }
 
+    // Carica impostazioni dashboard
+    loadSettings();
     loadCourts();
   }, []);
+
+  async function loadSettings() {
+    try {
+      const appSettings = await getSettings();
+      if (appSettings.dashboardSettings) {
+        setSettings(appSettings.dashboardSettings);
+      }
+    } catch (error) {
+      console.error('Errore caricamento settings:', error);
+    }
+  }
 
   async function loadCourts() {
     try {
@@ -44,6 +67,8 @@ export default function Dashboard() {
     }
   }
 
+
+
   const selectedCourt = courts.find(c => c.id === selectedCourtId);
 
   return (
@@ -54,7 +79,7 @@ export default function Dashboard() {
         {/* Modern Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <SparklesIcon className="h-8 w-8 text-blue-600" />
+            <CalendarIcon className="h-8 w-8 text-blue-600" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
               Calendario Prenotazioni
             </h1>
@@ -62,28 +87,29 @@ export default function Dashboard() {
           <p className="text-gray-600">Visualizza e prenota i tuoi slot preferiti</p>
         </div>
 
+
         {/* Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition border-l-4 border-blue-600 p-6">
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition border-l-4 border-blue-600 p-6 group">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-50 rounded-lg">
                 <CalendarIcon className="h-6 w-6 text-blue-600" />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-sm text-gray-600">Disponibilità</p>
-                <p className="text-lg font-semibold text-gray-900">7 giorni a settimana</p>
+                <p className="text-lg font-semibold text-gray-900 mt-1">{settings.availabilityText}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition border-l-4 border-green-600 p-6">
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition border-l-4 border-green-600 p-6 group">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-green-50 rounded-lg">
                 <ClockIcon className="h-6 w-6 text-green-600" />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-sm text-gray-600">Orari</p>
-                <p className="text-lg font-semibold text-gray-900">06:00 - 22:00</p>
+                <p className="text-lg font-semibold text-gray-900 mt-1">{settings.hoursText}</p>
               </div>
             </div>
           </div>

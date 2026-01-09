@@ -146,3 +146,10 @@ model Transaction {
   @@index([userId, createdAt])
   @@index([walletId, createdAt])
 }
+
+model AppSettings {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  value           Json
+  updatedAt       DateTime @updatedAt
+}

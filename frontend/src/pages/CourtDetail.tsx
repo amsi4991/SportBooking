@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-import { ArrowLeftIcon, MapPinIcon, StarIcon, LockClosedIcon } from '@heroicons/react/24/outline';
-import BlockCourtModal from '../components/BlockCourtModal';
-import { getBlocksByCourtId, CourtBlock } from '../services/court-blocks';
+import { ArrowLeftIcon, MapPinIcon, StarIcon } from '@heroicons/react/24/outline';
 
 const DAYS_OF_WEEK = [
   { label: 'Lunedì', value: 0 },
@@ -47,25 +45,10 @@ export default function CourtDetail() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [showBlockModal, setShowBlockModal] = useState(false);
-  const [blocks, setBlocks] = useState<CourtBlock[]>([]);
 
   useEffect(() => {
-    // Verifica se l'utente è admin
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setIsAdmin(payload.role === 'admin');
-      } catch (e) {
-        console.error('Errore decodifica token:', e);
-      }
-    }
-
     if (id) {
       loadCourt();
-      loadBlocks();
     }
   }, [id]);
 
@@ -80,17 +63,6 @@ export default function CourtDetail() {
       setCourt(data);
     } catch (error) {
       console.error('Errore:', error);
-    }
-  }
-
-  async function loadBlocks() {
-    try {
-      if (id) {
-        const data = await getBlocksByCourtId(id);
-        setBlocks(data);
-      }
-    } catch (error) {
-      console.error('Errore caricamento blocchi:', error);
     }
   }
 
@@ -221,44 +193,21 @@ export default function CourtDetail() {
                 )}
               </div>
             )}
-
-            {/* Admin Block Button */}
-            {isAdmin && (
-              <button
-                onClick={() => setShowBlockModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
-              >
-                <LockClosedIcon className="h-5 w-5" />
-                Blocca campo
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Block Modal */}
-        {id && (
-          <BlockCourtModal
-            isOpen={showBlockModal}
-            onClose={() => setShowBlockModal(false)}
-            courtId={id}
-            blocks={blocks}
-            onBlockCreated={loadBlocks}
-          />
-        )}
-
         {/* Booking Section */}
-        {!isAdmin && (
-          <div className="bg-white rounded-lg shadow-md p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Prenota uno slot</h2>
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Prenota uno slot</h2>
 
-            {message && (
-              <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
-                {message.text}
-              </div>
-            )}
+          {message && (
+            <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+              {message.text}
+            </div>
+          )}
 
-            {/* Date Picker */}
-            <div className="mb-8">
+          {/* Date Picker */}
+          <div className="mb-8">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Seleziona data
             </label>
@@ -298,8 +247,7 @@ export default function CourtDetail() {
               })}
             </div>
           )}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

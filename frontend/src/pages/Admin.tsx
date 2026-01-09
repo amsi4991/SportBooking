@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-import { TrashIcon, SparklesIcon, ArrowUpRightIcon, ArrowDownLeftIcon, PlusIcon, XMarkIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, SparklesIcon, ArrowUpRightIcon, ArrowDownLeftIcon, PlusIcon, XMarkIcon, PencilIcon, PaintBrushIcon } from '@heroicons/react/24/outline';
 import { 
   getAdminStats, 
   getAdminBookings, 
@@ -12,6 +12,9 @@ import {
   getUserTransactions
 } from '../services/admin';
 import { getAllCourts, createCourt, updateCourt, deleteCourt, Court, getPriceRules, createPriceRule, updatePriceRule, deletePriceRule, DAYS_OF_WEEK, PriceRule } from '../services/courts';
+import { getSettings, updateBrandSettings, updateDashboardSettings } from '../services/settings';
+import BlockCourtModal from '../components/BlockCourtModal';
+import { getBlocksByCourtId, CourtBlock } from '../services/court-blocks';
 
 interface Booking {
   id: string;
@@ -51,6 +54,13 @@ interface Transaction {
   };
 }
 
+interface BrandSettings {
+  icon: string;
+  name: string;
+}
+
+const AVAILABLE_ICONS = ['⚽', '🏀', '🎾', '🏐', '🏑', '🏒', '🏓', '⛳', '🎳', '🏏', '⚾', '🥎', '🏸', '🥊', '🥋'];
+
 export default function Admin() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
@@ -59,6 +69,25 @@ export default function Admin() {
   const [courts, setCourts] = useState<Court[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  
+  // Brand settings
+  const [brandSettings, setBrandSettings] = useState<BrandSettings>({ icon: '⚽', name: 'SportBook' });
+  const [editBrandIcon, setEditBrandIcon] = useState('⚽');
+  const [editBrandName, setEditBrandName] = useState('SportBook');
+  const [showBrandEditor, setShowBrandEditor] = useState(false);
+  
+  // Dashboard settings
+  interface DashboardSettings {
+    availabilityText: string;
+    hoursText: string;
+  }
+  const [dashboardSettings, setDashboardSettings] = useState<DashboardSettings>({ 
+    availabilityText: '7 giorni a settimana',
+    hoursText: '06:00 - 22:00'
+  });
+  const [editAvailabilityText, setEditAvailabilityText] = useState('7 giorni a settimana');
+  const [editHoursText, setEditHoursText] = useState('06:00 - 22:00');
+  const [showDashboardEditor, setShowDashboardEditor] = useState(false);
   
   // Form per creare nuovo utente
   const [showCreateUserForm, setShowCreateUserForm] = useState(false);
@@ -80,9 +109,33 @@ export default function Admin() {
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [walletForm, setWalletForm] = useState({ amount: 0, operation: 'add' as 'add' | 'subtract' | 'set', description: '' });
 
+  // Modal per bloccare campi
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [selectedCourtForBlock, setSelectedCourtForBlock] = useState<Court | null>(null);
+  const [blocksMap, setBlocksMap] = useState<{ [courtId: string]: CourtBlock[] }>({});
+
   useEffect(() => {
     loadAdminData();
+    loadSettings();
   }, []);
+
+  async function loadSettings() {
+    try {
+      const settings = await getSettings();
+      if (settings.brandSettings) {
+        setBrandSettings(settings.brandSettings);
+        setEditBrandIcon(settings.brandSettings.icon);
+        setEditBrandName(settings.brandSettings.name);
+      }
+      if (settings.dashboardSettings) {
+        setDashboardSettings(settings.dashboardSettings);
+        setEditAvailabilityText(settings.dashboardSettings.availabilityText);
+        setEditHoursText(settings.dashboardSettings.hoursText);
+      }
+    } catch (error) {
+      console.error('Errore caricamento settings:', error);
+    }
+  }
 
   async function loadAdminData() {
     try {
@@ -101,6 +154,23 @@ export default function Admin() {
       setMessage({ type: 'error', text: '❌ Errore nel caricamento dati' });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function openBlockModal(court: Court) {
+    setSelectedCourtForBlock(court);
+    setShowBlockModal(true);
+    try {
+      const blocks = await getBlocksByCourtId(court.id);
+      setBlocksMap(prev => ({ ...prev, [court.id]: blocks }));
+    } catch (error) {
+      console.error('Errore caricamento blocchi:', error);
+    }
+  }
+
+  function handleBlocksCreated() {
+    if (selectedCourtForBlock) {
+      openBlockModal(selectedCourtForBlock);
     }
   }
 
@@ -313,6 +383,36 @@ export default function Admin() {
     );
   }
 
+  function handleSaveBrand() {
+    if (editBrandName.trim()) {
+      updateBrandSettings(editBrandIcon, editBrandName)
+        .then((settings) => {
+          setBrandSettings(settings.brandSettings || { icon: editBrandIcon, name: editBrandName });
+          setShowBrandEditor(false);
+          setMessage({ type: 'success', text: '✅ Brand personalizzato con successo!' });
+          // Reload per mostrare le modifiche nella navbar
+          setTimeout(() => window.location.reload(), 1500);
+        })
+        .catch((error) => {
+          setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
+        });
+    }
+  }
+
+  function handleSaveDashboard() {
+    if (editAvailabilityText.trim() && editHoursText.trim()) {
+      updateDashboardSettings(editAvailabilityText, editHoursText)
+        .then((settings) => {
+          setDashboardSettings(settings.dashboardSettings || { availabilityText: editAvailabilityText, hoursText: editHoursText });
+          setShowDashboardEditor(false);
+          setMessage({ type: 'success', text: '✅ Impostazioni dashboard salvate con successo!' });
+        })
+        .catch((error) => {
+          setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
+        });
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
@@ -329,6 +429,180 @@ export default function Admin() {
         {message && (
           <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
             {message.text}
+          </div>
+        )}
+
+        {/* Brand Customization */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <PaintBrushIcon className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Personalizzazione Brand</h2>
+                <p className="text-sm text-gray-600">Icona: {brandSettings.icon} • Nome: {brandSettings.name}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowBrandEditor(true)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition flex items-center gap-2"
+            >
+              <PencilIcon className="h-4 w-4" />
+              Modifica
+            </button>
+          </div>
+        </div>
+
+        {/* Dashboard Settings */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <SparklesIcon className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Impostazioni Dashboard</h2>
+                <p className="text-sm text-gray-600">Disponibilità: {dashboardSettings.availabilityText} • Orari: {dashboardSettings.hoursText}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowDashboardEditor(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+            >
+              <PencilIcon className="h-4 w-4" />
+              Modifica
+            </button>
+          </div>
+        </div>
+
+        {/* Brand Editor Modal */}
+        {showBrandEditor && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Personalizza il brand</h2>
+              
+              {/* Icon Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Seleziona icona</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {AVAILABLE_ICONS.map((icon) => (
+                    <button
+                      key={icon}
+                      onClick={() => setEditBrandIcon(icon)}
+                      className={`text-3xl p-2 rounded-lg transition ${
+                        editBrandIcon === icon
+                          ? 'bg-purple-600 ring-2 ring-purple-400'
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Name Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nome applicazione</label>
+                <input
+                  type="text"
+                  value={editBrandName}
+                  onChange={(e) => setEditBrandName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                  placeholder="Es: SportBook"
+                />
+              </div>
+
+              {/* Preview */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600 mb-2">Anteprima:</p>
+                <div className="flex items-center gap-2">
+                  <div className="text-3xl">{editBrandIcon}</div>
+                  <p className="text-xl font-bold text-gray-900">{editBrandName}</p>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowBrandEditor(false)}
+                  className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleSaveBrand}
+                  className="flex-1 py-2 px-4 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition"
+                >
+                  Salva
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dashboard Settings Editor Modal */}
+        {showDashboardEditor && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Impostazioni Dashboard</h2>
+              
+              {/* Disponibilità Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Disponibilità</label>
+                <input
+                  type="text"
+                  value={editAvailabilityText}
+                  onChange={(e) => setEditAvailabilityText(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  placeholder="Es: 7 giorni a settimana"
+                />
+              </div>
+
+              {/* Orari Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Orari</label>
+                <input
+                  type="text"
+                  value={editHoursText}
+                  onChange={(e) => setEditHoursText(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  placeholder="Es: 06:00 - 22:00"
+                />
+              </div>
+
+              {/* Preview */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600 mb-3">Anteprima:</p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <span className="text-gray-600 text-sm">Disponibilità:</span>
+                    <span className="text-gray-900 font-semibold">{editAvailabilityText}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-gray-600 text-sm">Orari:</span>
+                    <span className="text-gray-900 font-semibold">{editHoursText}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDashboardEditor(false)}
+                  className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleSaveDashboard}
+                  className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+                >
+                  Salva
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -678,6 +952,13 @@ export default function Admin() {
                       Modifica
                     </button>
                     <button
+                      onClick={() => openBlockModal(court)}
+                      className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 px-3 py-2 rounded-md text-sm font-medium transition flex items-center justify-center gap-2"
+                    >
+                      🔒
+                      Blocca
+                    </button>
+                    <button
                       onClick={() => handleDeleteCourt(court.id)}
                       className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-md text-sm font-medium transition"
                     >
@@ -913,6 +1194,20 @@ export default function Admin() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Block Court Modal */}
+        {selectedCourtForBlock && (
+          <BlockCourtModal
+            isOpen={showBlockModal}
+            onClose={() => {
+              setShowBlockModal(false);
+              setSelectedCourtForBlock(null);
+            }}
+            courtId={selectedCourtForBlock.id}
+            blocks={blocksMap[selectedCourtForBlock.id] || []}
+            onBlockCreated={handleBlocksCreated}
+          />
         )}
       </div>
     </div>

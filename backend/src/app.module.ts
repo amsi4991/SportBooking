@@ -6,6 +6,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { CourtsModule } from './modules/courts/courts.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { ProfileModule } from './modules/profile/profile.module';
     WalletModule,
     BookingsModule,
     CourtsModule,
-    ProfileModule
+    ProfileModule,
+    SettingsModule
   ],
 })
 export class AppModule {}

@@ -102,6 +102,30 @@ async function main() {
     user: user.email,
     courts: [court1.name, court2.name, court3.name]
   });
+
+  // APP SETTINGS - Valori iniziali
+  await prisma.appSettings.upsert({
+    where: { key: 'brandSettings' },
+    update: {},
+    create: {
+      key: 'brandSettings',
+      value: { icon: '⚽', name: 'SportBook' },
+    },
+  });
+
+  await prisma.appSettings.upsert({
+    where: { key: 'dashboardSettings' },
+    update: {},
+    create: {
+      key: 'dashboardSettings',
+      value: { 
+        availabilityText: '7 giorni a settimana',
+        hoursText: '06:00 - 22:00'
+      },
+    },
+  });
+
+  console.log('✅ Settings inizializzati');
 }
 
 main()
