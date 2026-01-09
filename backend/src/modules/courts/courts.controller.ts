@@ -105,6 +105,16 @@ export class CourtsController {
     return this.service.getPriceRules(courtId);
   }
 
+  @Put(':courtId/prices/:ruleId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async updatePriceRule(
+    @Param('ruleId') ruleId: string,
+    @Body() body: { weekdays?: number[]; startTime?: string; endTime?: string; price?: number }
+  ) {
+    return this.service.updatePriceRule(ruleId, body);
+  }
+
   @Delete(':courtId/prices/:ruleId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')

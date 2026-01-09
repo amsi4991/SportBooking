@@ -11,7 +11,7 @@ import {
   updateUserWallet,
   getUserTransactions
 } from '../services/admin';
-import { getAllCourts, createCourt, updateCourt, deleteCourt, Court, getPriceRules, createPriceRule, deletePriceRule, DAYS_OF_WEEK, PriceRule } from '../services/courts';
+import { getAllCourts, createCourt, updateCourt, deleteCourt, Court, getPriceRules, createPriceRule, updatePriceRule, deletePriceRule, DAYS_OF_WEEK, PriceRule } from '../services/courts';
 
 interface Booking {
   id: string;
@@ -70,6 +70,7 @@ export default function Admin() {
   const [courtForm, setCourtForm] = useState({ name: '', city: '', sport: '', description: '', image: '' });
   const [priceRules, setPriceRules] = useState<PriceRule[]>([]);
   const [showPriceForm, setShowPriceForm] = useState(false);
+  const [editingPriceRuleId, setEditingPriceRuleId] = useState<string | null>(null);
   const [priceForm, setPriceForm] = useState({ weekdays: [] as number[], startTime: '08:00', endTime: '12:00', price: 0 });
   
   // Modal per modificare wallet
@@ -211,6 +212,7 @@ export default function Admin() {
       setPriceRules([]);
     }
     setShowPriceForm(false);
+    setEditingPriceRuleId(null);
     setPriceForm({ weekdays: [], startTime: '08:00', endTime: '12:00', price: 0 });
     setShowCourtModal(true);
   }
@@ -228,14 +230,31 @@ export default function Admin() {
     if (!selectedCourt || priceForm.weekdays.length === 0) return;
 
     try {
-      await createPriceRule(
-        selectedCourt.id,
-        priceForm.weekdays,
-        priceForm.startTime,
-        priceForm.endTime,
-        Math.round(priceForm.price * 100) // Converti euro a centesimi
-      );
-      setMessage({ type: 'success', text: '✅ Fascia oraria aggiunta!' });
+      if (editingPriceRuleId) {
+        // Update
+        await updatePriceRule(
+          selectedCourt.id,
+          editingPriceRuleId,
+          {
+            weekdays: priceForm.weekdays,
+            startTime: priceForm.startTime,
+            endTime: priceForm.endTime,
+            price: Math.round(priceForm.price * 100)
+          }
+        );
+        setMessage({ type: 'success', text: '✅ Fascia oraria aggiornata!' });
+        setEditingPriceRuleId(null);
+      } else {
+        // Create
+        await createPriceRule(
+          selectedCourt.id,
+          priceForm.weekdays,
+          priceForm.startTime,
+          priceForm.endTime,
+          Math.round(priceForm.price * 100) // Converti euro a centesimi
+        );
+        setMessage({ type: 'success', text: '✅ Fascia oraria aggiunta!' });
+      }
       setPriceForm({ weekdays: [], startTime: '08:00', endTime: '12:00', price: 0 });
       setShowPriceForm(false);
       loadPriceRules(selectedCourt.id);
@@ -244,12 +263,27 @@ export default function Admin() {
     }
   }
 
+  function handleEditPrice(rule: PriceRule) {
+    setEditingPriceRuleId(rule.id);
+    setPriceForm({
+      weekdays: rule.weekdays,
+      startTime: rule.startTime,
+      endTime: rule.endTime,
+      price: rule.price / 100 // Converti centesimi a euro
+    });
+    setShowPriceForm(true);
+  }
+
   async function handleDeletePrice(ruleId: string) {
     if (!selectedCourt) return;
 
     try {
       await deletePriceRule(selectedCourt.id, ruleId);
       setMessage({ type: 'success', text: '✅ Fascia oraria eliminata!' });
+      if (editingPriceRuleId === ruleId) {
+        setEditingPriceRuleId(null);
+        setShowPriceForm(false);
+      }
       loadPriceRules(selectedCourt.id);
     } catch (error) {
       setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
@@ -806,10 +840,14 @@ export default function Admin() {
                             onClick={handleAddPrice}
                             className="flex-1 bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-sm font-medium transition"
                           >
-                            Aggiungi
+                            {editingPriceRuleId ? 'Aggiorna' : 'Aggiungi'}
                           </button>
                           <button
-                            onClick={() => setShowPriceForm(false)}
+                            onClick={() => {
+                              setShowPriceForm(false);
+                              setEditingPriceRuleId(null);
+                              setPriceForm({ weekdays: [], startTime: '08:00', endTime: '12:00', price: 0 });
+                            }}
                             className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-900 px-2 py-1 rounded text-sm font-medium transition"
                           >
                             Annulla
@@ -833,8 +871,16 @@ export default function Admin() {
                               <div className="flex items-center gap-2">
                                 <span className="font-bold text-green-600">€{(rule.price / 100).toFixed(2)}</span>
                                 <button
+                                  onClick={() => handleEditPrice(rule)}
+                                  className="text-blue-600 hover:text-blue-700 p-1"
+                                  title="Modifica"
+                                >
+                                  <PencilIcon className="h-4 w-4" />
+                                </button>
+                                <button
                                   onClick={() => handleDeletePrice(rule.id)}
                                   className="text-red-600 hover:text-red-700 p-1"
+                                  title="Elimina"
                                 >
                                   <TrashIcon className="h-4 w-4" />
                                 </button>

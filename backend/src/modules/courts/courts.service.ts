@@ -157,6 +157,28 @@ export class CourtsService {
     });
   }
 
+  async updatePriceRule(ruleId: string, data: {
+    weekdays?: number[];
+    startTime?: string;
+    endTime?: string;
+    price?: number;
+  }) {
+    const rule = await this.prisma.priceRule.findUnique({ where: { id: ruleId } });
+    if (!rule) {
+      throw new NotFoundException('Regola di prezzo non trovata');
+    }
+
+    return this.prisma.priceRule.update({
+      where: { id: ruleId },
+      data: {
+        ...(data.weekdays && { weekdays: data.weekdays }),
+        ...(data.startTime && { startTime: data.startTime }),
+        ...(data.endTime && { endTime: data.endTime }),
+        ...(data.price !== undefined && { price: data.price })
+      }
+    });
+  }
+
   async deletePriceRule(ruleId: string) {
     const rule = await this.prisma.priceRule.findUnique({ where: { id: ruleId } });
     if (!rule) {

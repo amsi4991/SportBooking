@@ -78,6 +78,23 @@ export async function createPriceRule(
   });
 }
 
+export async function updatePriceRule(
+  courtId: string,
+  ruleId: string,
+  data: {
+    weekdays?: number[];
+    startTime?: string;
+    endTime?: string;
+    price?: number;
+  }
+): Promise<PriceRule> {
+  return apiFetch(`/courts/${courtId}/prices/${ruleId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+}
+
 export async function deletePriceRule(courtId: string, ruleId: string): Promise<void> {
   return apiFetch(`/courts/${courtId}/prices/${ruleId}`, {
     method: 'DELETE'
