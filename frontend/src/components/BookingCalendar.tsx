@@ -10,6 +10,7 @@ import { getBlocksByCourtId, CourtBlock } from '../services/court-blocks';
 
 interface BookingCalendarProps {
   courtId: string;
+  isAdmin?: boolean;
 }
 
 interface PendingBooking {
@@ -18,7 +19,7 @@ interface PendingBooking {
   endsAt: string;
 }
 
-export default function BookingCalendar({ courtId }: BookingCalendarProps) {
+export default function BookingCalendar({ courtId, isAdmin = false }: BookingCalendarProps) {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -192,23 +193,37 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
         </div>
       )}
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
-        <strong>ℹ️ Come prenotare:</strong> 
-        <ul className="list-disc list-inside mt-2">
-          <li>Clicca e trascina sulle celle <span className="text-blue-600 font-semibold">bianche (libere)</span> per selezionare gli orari</li>
-          <li>Le celle <span className="text-red-600 font-semibold">rosse (occupate)</span> non possono essere prenotate</li>
-          <li>Le celle <span className="text-gray-600 font-semibold">grigie (bloccate)</span> sono riservate dall'amministratore</li>
-          <li>Puoi selezionare uno o più slot consecutivi</li>
-          <li>Ti verrà chiesto di scegliere se prenotare un singolo o un doppio</li>
-          <li>Potrai quindi cercare e selezionare gli altri giocatori partecipanti</li>
-        </ul>
+      <div className={`border rounded-lg p-4 text-sm ${isAdmin ? 'bg-yellow-50 border-yellow-200 text-yellow-900' : 'bg-blue-50 border-blue-200 text-blue-900'}`}>
+        {isAdmin ? (
+          <>
+            <strong>ℹ️ Visualizzazione calendario:</strong>
+            <ul className="list-disc list-inside mt-2">
+              <li>Puoi visualizzare il calendario e le prenotazioni</li>
+              <li>Le celle <span className="text-red-600 font-semibold">rosse (occupate)</span> sono prenotazioni attive</li>
+              <li>Le celle <span className="text-gray-600 font-semibold">grigie (bloccate)</span> sono blocchi che hai configurato</li>
+              <li>Non puoi effettuare prenotazioni come admin</li>
+            </ul>
+          </>
+        ) : (
+          <>
+            <strong>ℹ️ Come prenotare:</strong> 
+            <ul className="list-disc list-inside mt-2">
+              <li>Clicca e trascina sulle celle <span className="text-blue-600 font-semibold">bianche (libere)</span> per selezionare gli orari</li>
+              <li>Le celle <span className="text-red-600 font-semibold">rosse (occupate)</span> non possono essere prenotate</li>
+              <li>Le celle <span className="text-gray-600 font-semibold">grigie (bloccate)</span> sono riservate dall'amministratore</li>
+              <li>Puoi selezionare uno o più slot consecutivi</li>
+              <li>Ti verrà chiesto di scegliere se prenotare un singolo o un doppio</li>
+              <li>Potrai quindi cercare e selezionare gli altri giocatori partecipanti</li>
+            </ul>
+          </>
+        )}
       </div>
 
       <FullCalendar
         plugins={[timeGridPlugin, interactionPlugin]}
         initialView="timeGridWeek"
         locale="it"
-        selectable={true}
+        selectable={!isAdmin}
         events={events}
         select={handleSelect}
         height="auto"

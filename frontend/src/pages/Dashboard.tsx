@@ -1,4 +1,3 @@
-
 import BookingCalendar from '../components/BookingCalendar';
 import Navigation from '../components/Navigation';
 import { CalendarIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/outline';
@@ -15,8 +14,20 @@ export default function Dashboard() {
   const [selectedCourtId, setSelectedCourtId] = useState<string>('550e8400-e29b-41d4-a716-446655440000');
   const [courts, setCourts] = useState<Court[]>([]);
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Verifica se l'utente è admin
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setIsAdmin(payload.role === 'admin');
+      } catch (e) {
+        console.error('Errore decodifica token:', e);
+      }
+    }
+
     loadCourts();
   }, []);
 
@@ -94,7 +105,7 @@ export default function Dashboard() {
 
         {/* Calendar */}
         <div className="card">
-          <BookingCalendar courtId={selectedCourtId} key={selectedCourtId} />
+          <BookingCalendar courtId={selectedCourtId} key={selectedCourtId} isAdmin={isAdmin} />
         </div>
       </div>
     </div>

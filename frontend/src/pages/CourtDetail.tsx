@@ -247,17 +247,18 @@ export default function CourtDetail() {
         )}
 
         {/* Booking Section */}
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Prenota uno slot</h2>
+        {!isAdmin && (
+          <div className="bg-white rounded-lg shadow-md p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Prenota uno slot</h2>
 
-          {message && (
-            <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
-              {message.text}
-            </div>
-          )}
+            {message && (
+              <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                {message.text}
+              </div>
+            )}
 
-          {/* Date Picker */}
-          <div className="mb-8">
+            {/* Date Picker */}
+            <div className="mb-8">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Seleziona data
             </label>
@@ -297,7 +298,8 @@ export default function CourtDetail() {
               })}
             </div>
           )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

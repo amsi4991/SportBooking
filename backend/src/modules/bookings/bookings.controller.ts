@@ -32,6 +32,6 @@ export class BookingsController {
     @Req() req: any,
     @Param('bookingId') bookingId: string
   ) {
-    return this.service.deleteBooking(req.user.id, bookingId);
+    return this.service.deleteBooking(req.user.id, bookingId, req.user.role === 'admin');
   }
 }

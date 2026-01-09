@@ -38,6 +38,7 @@ export default function Profile() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -48,10 +49,23 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Verifica se l'utente è admin
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setIsAdmin(payload.role === 'admin');
+      } catch (e) {
+        console.error('Errore decodifica token:', e);
+      }
+    }
+
     loadProfile();
     loadBookings();
-    loadTransactions();
-  }, []);
+    if (!isAdmin) {
+      loadTransactions();
+    }
+  }, [isAdmin]);
 
   async function loadProfile() {
     try {
@@ -260,38 +274,44 @@ export default function Profile() {
                 <p className="text-lg font-semibold text-gray-900">{profile.city || '—'}</p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-gray-600">Saldo portafoglio</p>
-                <p className="text-2xl font-bold text-blue-600">€{(profile.wallet.balance / 100).toFixed(2)}</p>
-              </div>
+              {!isAdmin && profile.wallet && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-600">Saldo portafoglio</p>
+                  <p className="text-2xl font-bold text-blue-600">€{(profile.wallet.balance / 100).toFixed(2)}</p>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Bookings */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-            <CalendarIcon className="h-6 w-6 text-blue-600" />
-            Le mie prenotazioni
-          </h2>
+        {!isAdmin && (
+          <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+              <CalendarIcon className="h-6 w-6 text-blue-600" />
+              Le mie prenotazioni
+            </h2>
 
-          {bookings.length === 0 ? (
-            <p className="text-gray-500">Nessuna prenotazione</p>
-          ) : (
-            <div className="space-y-4">
-              {bookings.map((booking) => {
-                const start = new Date(booking.startsAt);
-                const end = new Date(booking.endsAt);
-                const isUpcoming = start > new Date();
+            {bookings.length === 0 ? (
+              <p className="text-gray-500">Nessuna prenotazione</p>
+            ) : (
+              <div className="space-y-4">
+                {bookings.map((booking) => {
+                  const start = new Date(booking.startsAt);
+                  const end = new Date(booking.endsAt);
+                  const now = new Date();
+                  const isUpcoming = start > now;
+                  const twoHoursBeforeStart = new Date(start.getTime() - 2 * 60 * 60 * 1000);
+                  const canDelete = isUpcoming && now < twoHoursBeforeStart;
 
-                return (
-                  <div key={booking.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
-                      <div>
-                        <p className="text-sm text-gray-600">Campo</p>
-                        <p className="font-semibold text-gray-900">{booking.court.name}</p>
-                        <p className="text-sm text-gray-600">{booking.court.city}</p>
-                      </div>
+                  return (
+                    <div key={booking.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                        <div>
+                          <p className="text-sm text-gray-600">Campo</p>
+                          <p className="font-semibold text-gray-900">{booking.court.name}</p>
+                          <p className="text-sm text-gray-600">{booking.court.city}</p>
+                        </div>
 
                       <div>
                         <p className="text-sm text-gray-600">Data</p>
@@ -313,7 +333,7 @@ export default function Profile() {
                             {booking.status}
                           </p>
                         </div>
-                        {isUpcoming && (
+                        {canDelete ? (
                           <button
                             onClick={() => handleDeleteBooking(booking.id)}
                             className="mt-2 bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 w-fit"
@@ -321,7 +341,9 @@ export default function Profile() {
                             <TrashIcon className="h-4 w-4" />
                             Elimina
                           </button>
-                        )}
+                        ) : isUpcoming ? (
+                          <p className="mt-2 text-xs text-gray-600">Non puoi cancellare entro 2 ore dall'inizio</p>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -329,42 +351,45 @@ export default function Profile() {
               })}
             </div>
           )}
-        </div>
+          </div>
+        )}
 
         {/* Transactions */}
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Cronologia transazioni</h2>
+        {!isAdmin && (
+          <div className="bg-white rounded-lg shadow-md p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Cronologia transazioni</h2>
 
-          {transactions.length === 0 ? (
-            <p className="text-gray-500">Nessuna transazione</p>
-          ) : (
-            <div className="space-y-3">
-              {transactions.map((tx) => {
-                const date = new Date(tx.createdAt);
-                const isDeposit = tx.type === 'deposit' || tx.type === 'refund';
-                const icon = isDeposit ? ArrowDownLeftIcon : ArrowUpRightIcon;
-                const Icon = icon;
+            {transactions.length === 0 ? (
+              <p className="text-gray-500">Nessuna transazione</p>
+            ) : (
+              <div className="space-y-3">
+                {transactions.map((tx) => {
+                  const date = new Date(tx.createdAt);
+                  const isDeposit = tx.type === 'deposit' || tx.type === 'refund';
+                  const icon = isDeposit ? ArrowDownLeftIcon : ArrowUpRightIcon;
+                  const Icon = icon;
 
-                return (
-                  <div key={tx.id} className="flex items-center justify-between border-b border-gray-200 pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${isDeposit ? 'bg-green-100' : 'bg-red-100'}`}>
-                        <Icon className={`h-5 w-5 ${isDeposit ? 'text-green-600' : 'text-red-600'}`} />
+                  return (
+                    <div key={tx.id} className="flex items-center justify-between border-b border-gray-200 pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${isDeposit ? 'bg-green-100' : 'bg-red-100'}`}>
+                          <Icon className={`h-5 w-5 ${isDeposit ? 'text-green-600' : 'text-red-600'}`} />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{tx.description}</p>
+                          <p className="text-sm text-gray-600">{date.toLocaleDateString('it-IT')} {date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{tx.description}</p>
-                        <p className="text-sm text-gray-600">{date.toLocaleDateString('it-IT')} {date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</p>
-                      </div>
+                      <p className={`font-bold text-lg ${isDeposit ? 'text-green-600' : 'text-red-600'}`}>
+                        {isDeposit ? '+' : '-'}€{(tx.amount / 100).toFixed(2)}
+                      </p>
                     </div>
-                    <p className={`font-bold text-lg ${isDeposit ? 'text-green-600' : 'text-red-600'}`}>
-                      {isDeposit ? '+' : '-'}€{(tx.amount / 100).toFixed(2)}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -37,8 +37,20 @@ export default function Courts() {
   const [loading, setLoading] = useState(true);
   const [searchCity, setSearchCity] = useState('');
   const [searchSport, setSearchSport] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Verifica se l'utente è admin
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setIsAdmin(payload.role === 'admin');
+      } catch (e) {
+        console.error('Errore decodifica token:', e);
+      }
+    }
+
     loadCourts();
   }, []);
 
@@ -119,8 +131,7 @@ export default function Courts() {
             {courts.map((court) => (
               <div
                 key={court.id}
-                onClick={() => navigate(`/court/${court.id}`)}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
               >
                 {/* Image */}
                 <div className="h-48 bg-gray-200 overflow-hidden">
@@ -180,7 +191,10 @@ export default function Courts() {
                   )}
 
                   {/* Button */}
-                  <button className="w-full mt-4 btn-primary">
+                  <button 
+                    onClick={() => navigate(`/court/${court.id}`)}
+                    className="w-full mt-4 btn-primary"
+                  >
                     Visualizza Dettagli
                   </button>
                 </div>

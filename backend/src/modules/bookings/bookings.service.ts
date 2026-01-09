@@ -88,7 +88,7 @@ export class BookingsService {
     }
   }
 
-  async deleteBooking(userId: string, bookingId: string) {
+  async deleteBooking(userId: string, bookingId: string, isAdmin: boolean = false) {
     // Verifica che la prenotazione esista e appartenga all'utente
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId }
@@ -98,8 +98,18 @@ export class BookingsService {
       throw new NotFoundException('Prenotazione non trovata');
     }
 
-    if (booking.userId !== userId) {
+    if (!isAdmin && booking.userId !== userId) {
       throw new ForbiddenException('Non puoi eliminare prenotazioni di altri utenti');
+    }
+
+    // Verifica che non sia entro 2 ore dall'inizio della prenotazione (solo per non-admin)
+    if (!isAdmin) {
+      const now = new Date();
+      const twoHoursBeforeStart = new Date(booking.startsAt.getTime() - 2 * 60 * 60 * 1000);
+      
+      if (now > twoHoursBeforeStart) {
+        throw new ForbiddenException('Non puoi cancellare una prenotazione entro 2 ore dall\'inizio');
+      }
     }
 
     // Elimina la prenotazione
@@ -108,7 +118,7 @@ export class BookingsService {
     });
 
     // Rimborsa il credito nel wallet
-    await this.wallet.addCredit(userId, booking.totalPrice);
+    await this.wallet.addCredit(booking.userId, booking.totalPrice);
 
     return { message: 'Prenotazione eliminata e credito rimborsato', refundAmount: booking.totalPrice };
   }
