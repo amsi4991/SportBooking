@@ -22,6 +22,14 @@ interface Booking {
   endsAt: string;
   status: string;
   totalPrice: number;
+  players: Array<{
+    user: {
+      id: string;
+      email: string;
+      firstName?: string;
+      lastName?: string;
+    };
+  }>;
 }
 
 interface Transaction {
@@ -286,23 +294,26 @@ export default function Profile() {
 
         {/* Bookings */}
         {!isAdmin && (
-          <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-              <CalendarIcon className="h-6 w-6 text-blue-600" />
-              Le mie prenotazioni
-            </h2>
+          <>
+            {/* Future and Present Bookings */}
+            <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                <CalendarIcon className="h-6 w-6 text-blue-600" />
+                Le mie prenotazioni
+              </h2>
 
-            {bookings.length === 0 ? (
-              <p className="text-gray-500">Nessuna prenotazione</p>
-            ) : (
+              {bookings.filter(b => new Date(b.startsAt) > new Date()).length === 0 ? (
+                <p className="text-gray-500">Nessuna prenotazione futura</p>
+              ) : (
               <div className="space-y-4">
-                {bookings.map((booking) => {
+                {bookings.filter(b => new Date(b.startsAt) > new Date()).map((booking) => {
                   const start = new Date(booking.startsAt);
                   const end = new Date(booking.endsAt);
                   const now = new Date();
                   const isUpcoming = start > now;
                   const twoHoursBeforeStart = new Date(start.getTime() - 2 * 60 * 60 * 1000);
                   const canDelete = isUpcoming && now < twoHoursBeforeStart;
+                  const playerNames = booking.players.map(p => p.user.firstName || p.user.lastName || p.user.email).join(', ');
 
                   return (
                     <div key={booking.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition">
@@ -313,45 +324,108 @@ export default function Profile() {
                           <p className="text-sm text-gray-600">{booking.court.city}</p>
                         </div>
 
-                      <div>
-                        <p className="text-sm text-gray-600">Data</p>
-                        <p className="font-semibold text-gray-900">{start.toLocaleDateString('it-IT')}</p>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-gray-600">Orari</p>
-                        <p className="font-semibold text-gray-900">
-                          {start.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-col justify-between">
                         <div>
-                          <p className="text-sm text-gray-600">Prezzo</p>
-                          <p className="font-semibold text-gray-900">€{(booking.totalPrice / 100).toFixed(2)}</p>
-                          <p className={`text-xs font-semibold mt-1 ${booking.status === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
-                            {booking.status}
+                          <p className="text-sm text-gray-600">Data</p>
+                          <p className="font-semibold text-gray-900">{start.toLocaleDateString('it-IT')}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-600">Orari</p>
+                          <p className="font-semibold text-gray-900">
+                            {start.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
-                        {canDelete ? (
-                          <button
-                            onClick={() => handleDeleteBooking(booking.id)}
-                            className="mt-2 bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 w-fit"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                            Elimina
-                          </button>
-                        ) : isUpcoming ? (
-                          <p className="mt-2 text-xs text-gray-600">Non puoi cancellare entro 2 ore dall'inizio</p>
-                        ) : null}
+
+                        <div>
+                          <p className="text-sm text-gray-600">Giocatori</p>
+                          <p className="font-semibold text-gray-900 text-sm">{playerNames || 'Solo'}</p>
+                        </div>
+
+                        <div className="flex flex-col justify-between">
+                          <div>
+                            <p className="text-sm text-gray-600">Prezzo</p>
+                            <p className="font-semibold text-gray-900">€{(booking.totalPrice / 100).toFixed(2)}</p>
+                            <p className={`text-xs font-semibold mt-1 ${booking.status === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
+                              {booking.status}
+                            </p>
+                          </div>
+                          {canDelete ? (
+                            <button
+                              onClick={() => handleDeleteBooking(booking.id)}
+                              className="mt-2 bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 w-fit"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                              Elimina
+                            </button>
+                          ) : isUpcoming ? (
+                            <p className="mt-2 text-xs text-gray-600">Non puoi cancellare entro 2 ore dall'inizio</p>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            )}
             </div>
-          )}
-          </div>
+
+            {/* Past Activities */}
+            <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                <CalendarIcon className="h-6 w-6 text-gray-600" />
+                Le mie attività
+              </h2>
+
+              {bookings.filter(b => new Date(b.startsAt) <= new Date()).length === 0 ? (
+                <p className="text-gray-500">Nessuna attività passata</p>
+              ) : (
+                <div className="space-y-4">
+                  {bookings.filter(b => new Date(b.startsAt) <= new Date()).map((booking) => {
+                    const start = new Date(booking.startsAt);
+                    const end = new Date(booking.endsAt);
+                    const playerNames = booking.players.map(p => p.user.firstName || p.user.lastName || p.user.email).join(', ');
+
+                    return (
+                      <div key={booking.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition opacity-75">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                          <div>
+                            <p className="text-sm text-gray-600">Campo</p>
+                            <p className="font-semibold text-gray-900">{booking.court.name}</p>
+                            <p className="text-sm text-gray-600">{booking.court.city}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-sm text-gray-600">Data</p>
+                            <p className="font-semibold text-gray-900">{start.toLocaleDateString('it-IT')}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-sm text-gray-600">Orari</p>
+                            <p className="font-semibold text-gray-900">
+                              {start.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-sm text-gray-600">Giocatori</p>
+                            <p className="font-semibold text-gray-900 text-sm">{playerNames || 'Solo'}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-sm text-gray-600">Prezzo</p>
+                            <p className="font-semibold text-gray-900">€{(booking.totalPrice / 100).toFixed(2)}</p>
+                            <p className={`text-xs font-semibold mt-1 ${booking.status === 'ACTIVE' ? 'text-green-600' : 'text-gray-600'}`}>
+                              {booking.status}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* Transactions */}

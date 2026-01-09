@@ -72,6 +72,18 @@ export class ProfileService {
             city: true,
             sport: true
           }
+        },
+        players: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true
+              }
+            }
+          }
         }
       },
       orderBy: { startsAt: 'desc' }
