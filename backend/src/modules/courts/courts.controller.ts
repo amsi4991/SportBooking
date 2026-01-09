@@ -45,9 +45,16 @@ export class CourtsController {
   @Roles('admin')
   async createBlock(
     @Param('courtId') courtId: string,
-    @Body() body: { startTime: string; endTime: string; daysOfWeek: number[] }
+    @Body() body: { startDate: string; endDate: string; startTime: string; endTime: string; daysOfWeek: number[] }
   ) {
-    return this.blocksService.createBlock(courtId, body.startTime, body.endTime, body.daysOfWeek);
+    return this.blocksService.createBlock(
+      courtId,
+      new Date(body.startDate),
+      new Date(body.endDate),
+      body.startTime,
+      body.endTime,
+      body.daysOfWeek
+    );
   }
 
   @Delete(':courtId/blocks/:blockId')

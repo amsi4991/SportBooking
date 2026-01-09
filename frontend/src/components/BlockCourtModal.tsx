@@ -18,6 +18,14 @@ export default function BlockCourtModal({
   blocks,
   onBlockCreated
 }: BlockCourtModalProps) {
+  // Calculate default dates: today to 30 days from now
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const thirtyDaysLater = new Date(today);
+  thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+
+  const [startDate, setStartDate] = useState(today.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(thirtyDaysLater.toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('12:00');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -43,14 +51,33 @@ export default function BlockCourtModal({
       return;
     }
 
+    if (!startDate || !endDate) {
+      setError('Seleziona entrambe le date');
+      return;
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+      setError('La data di inizio deve essere prima della data di fine');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      await createBlock(courtId, startTime, endTime, selectedDays.sort());
+      await createBlock(
+        courtId,
+        new Date(startDate),
+        new Date(endDate),
+        startTime,
+        endTime,
+        selectedDays.sort()
+      );
       setStartTime('08:00');
       setEndTime('12:00');
       setSelectedDays([]);
+      setStartDate(today.toISOString().split('T')[0]);
+      setEndDate(thirtyDaysLater.toISOString().split('T')[0]);
       onBlockCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore durante la creazione del blocco');
@@ -116,6 +143,34 @@ export default function BlockCourtModal({
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <h4 className="font-medium text-gray-900 mb-4">Crea nuovo blocco</h4>
 
+                  {/* Date inputs */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Data inizio
+                      </label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        disabled={loading}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Data fine
+                      </label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        disabled={loading}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
                   {/* Time inputs */}
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
@@ -179,30 +234,37 @@ export default function BlockCourtModal({
                   <div>
                     <h4 className="font-medium text-gray-900 mb-3">Blocchi attivi</h4>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {blocks.map((block) => (
-                        <div
-                          key={block.id}
-                          className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg"
-                        >
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {block.startTime} - {block.endTime}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {block.daysOfWeek
-                                .map(day => DAYS_OF_WEEK.find(d => d.value === day)?.label)
-                                .join(', ')}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteBlock(block.id)}
-                            disabled={loading}
-                            className="text-red-600 hover:text-red-700 p-1"
+                      {blocks.map((block) => {
+                        const startDate = new Date(block.startDate).toLocaleDateString('it-IT');
+                        const endDate = new Date(block.endDate).toLocaleDateString('it-IT');
+                        return (
+                          <div
+                            key={block.id}
+                            className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg"
                           >
-                            <XMarkIcon className="h-5 w-5" />
-                          </button>
-                        </div>
-                      ))}
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {block.startTime} - {block.endTime}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Dal {startDate} al {endDate}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {block.daysOfWeek
+                                  .map(day => DAYS_OF_WEEK.find(d => d.value === day)?.label)
+                                  .join(', ')}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteBlock(block.id)}
+                              disabled={loading}
+                              className="text-red-600 hover:text-red-700 p-1"
+                            >
+                              <XMarkIcon className="h-5 w-5" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

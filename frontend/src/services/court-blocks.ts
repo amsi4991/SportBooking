@@ -3,9 +3,12 @@ import { apiFetch } from './api';
 export interface CourtBlock {
   id: string;
   courtId: string;
+  startDate: string; // ISO date string
+  endDate: string;   // ISO date string
   startTime: string;
   endTime: string;
   daysOfWeek: number[];
+  createdAt: string;
 }
 
 export async function getBlocksByCourtId(courtId: string): Promise<CourtBlock[]> {
@@ -21,6 +24,8 @@ export async function getBlocksByCourtId(courtId: string): Promise<CourtBlock[]>
 
 export async function createBlock(
   courtId: string,
+  startDate: Date,
+  endDate: Date,
   startTime: string,
   endTime: string,
   daysOfWeek: number[]
@@ -28,7 +33,13 @@ export async function createBlock(
   return apiFetch(`/courts/${courtId}/blocks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ startTime, endTime, daysOfWeek })
+    body: JSON.stringify({ 
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      startTime, 
+      endTime, 
+      daysOfWeek 
+    })
   });
 }
 

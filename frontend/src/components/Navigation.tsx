@@ -22,9 +22,6 @@ export default function Navigation() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Carica il wallet
-    refreshWallet();
-
     // Check if user is admin by decoding JWT
     const token = localStorage.getItem('token');
     console.log('Token from localStorage:', token ? 'EXISTS' : 'MISSING');
@@ -35,6 +32,11 @@ export default function Navigation() {
       console.log('Role from payload:', payload?.role);
       console.log('Is Admin?', payload?.role === 'admin');
       setIsAdmin(payload?.role === 'admin');
+
+      // Carica il wallet solo se NON è admin
+      if (payload?.role !== 'admin') {
+        refreshWallet();
+      }
     } else {
       console.log('No token found in localStorage');
     }
@@ -82,7 +84,7 @@ export default function Navigation() {
         </div>
 
         <div className="flex items-center gap-4">
-          {walletBalance !== null && (
+          {walletBalance !== null && !isAdmin && (
             <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg">
               <WalletIcon className="h-5 w-5 text-blue-600" />
               <span className="font-semibold text-gray-900">€ {(walletBalance / 100).toFixed(2)}</span>

@@ -85,14 +85,18 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
 
   function generateDatesForBlock(block: CourtBlock): Array<{ start: string; end: string }> {
     const dates: Array<{ start: string; end: string }> = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Resetta l'ora a mezzanotte
+    
+    // Parse block date range
+    const blockStart = new Date(block.startDate);
+    blockStart.setHours(0, 0, 0, 0);
+    
+    const blockEnd = new Date(block.endDate);
+    blockEnd.setHours(23, 59, 59, 999);
 
-    // Per i prossimi 365 giorni, genera gli eventi bloccati
-    for (let i = 0; i < 365; i++) {
-      const currentDate = new Date(today);
-      currentDate.setDate(currentDate.getDate() + i);
-
+    // Genera eventi per ogni giorno nel range specificato
+    let currentDate = new Date(blockStart);
+    
+    while (currentDate <= blockEnd) {
       const dayOfWeek = currentDate.getDay();
       const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0=lunedì, 6=domenica
 
@@ -103,6 +107,8 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
           end: `${dateStr}T${block.endTime}`
         });
       }
+
+      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     return dates;

@@ -343,17 +343,23 @@ export default function Admin() {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-lg font-bold text-blue-600">
-                        €{user.wallet ? (user.wallet.balance / 100).toFixed(2) : '0.00'}
-                      </span>
+                      {user.role === 'admin' ? (
+                        <span className="text-gray-500 text-sm italic">N/A</span>
+                      ) : (
+                        <span className="text-lg font-bold text-blue-600">
+                          €{user.wallet ? (user.wallet.balance / 100).toFixed(2) : '0.00'}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
-                      <button
-                        onClick={() => openWalletModal(user)}
-                        className="bg-green-50 hover:bg-green-100 text-green-600 px-3 py-2 rounded-md text-sm font-medium transition"
-                      >
-                        Gestisci wallet
-                      </button>
+                      {user.role !== 'admin' && (
+                        <button
+                          onClick={() => openWalletModal(user)}
+                          className="bg-green-50 hover:bg-green-100 text-green-600 px-3 py-2 rounded-md text-sm font-medium transition"
+                        >
+                          Gestisci wallet
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

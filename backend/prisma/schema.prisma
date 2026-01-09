@@ -119,6 +119,8 @@ enum TransactionType {
 model CourtBlock {
   id        String   @id @default(uuid())
   courtId   String   @db.Uuid
+  startDate DateTime // Data di inizio validità blocco
+  endDate   DateTime // Data di fine validità blocco
   startTime String   // HH:mm (es: "14:00")
   endTime   String   // HH:mm (es: "18:00")
   daysOfWeek Int[]    // Array di numeri: 0=lunedì, 1=martedì, ..., 6=domenica

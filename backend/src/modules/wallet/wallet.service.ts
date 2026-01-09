@@ -1,5 +1,4 @@
-
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { TransactionType } from '@prisma/client';
 
@@ -8,10 +7,20 @@ export class WalletService {
   constructor(private prisma: PrismaService) {}
 
   async getWallet(userId: string) {
+    // Verificare che l'utente non sia un admin
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.role === 'admin') {
+      throw new ForbiddenException('Gli admin non hanno un wallet');
+    }
     return this.prisma.wallet.findUnique({ where: { userId } });
   }
 
   async addCredit(userId: string, amount: number, description?: string) {
+    // Verificare che l'utente non sia un admin
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.role === 'admin') {
+      throw new ForbiddenException('Gli admin non hanno un wallet');
+    }
     const wallet = await this.prisma.wallet.upsert({
       where: { userId },
       update: { balance: { increment: amount } },
@@ -33,6 +42,11 @@ export class WalletService {
   }
 
   async spend(userId: string, amount: number, description?: string) {
+    // Verificare che l'utente non sia un admin
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.role === 'admin') {
+      throw new ForbiddenException('Gli admin non hanno un wallet');
+    }
     const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
     if (!wallet || wallet.balance < amount) {
       throw new BadRequestException('Credito insufficiente');
@@ -58,6 +72,11 @@ export class WalletService {
   }
 
   async refund(userId: string, amount: number, description?: string) {
+    // Verificare che l'utente non sia un admin
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.role === 'admin') {
+      throw new ForbiddenException('Gli admin non hanno un wallet');
+    }
     const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
     if (!wallet) {
       throw new BadRequestException('Wallet non trovato');

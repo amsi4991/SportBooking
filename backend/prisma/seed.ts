@@ -20,12 +20,7 @@ async function main() {
       password: hash('admin123'),
       firstName: 'Admin',
       lastName: 'User',
-      role: Role.admin,
-      wallet: {
-        create: {
-          balance: 0,
-        },
-      },
+      role: Role.admin
     },
   });
 
