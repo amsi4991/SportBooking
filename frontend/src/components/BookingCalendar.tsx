@@ -4,9 +4,17 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { getBookingsByCourtId, createBooking } from '../services/booking';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import CourtTypeModal from './CourtTypeModal';
+import { User } from '../services/users';
 
 interface BookingCalendarProps {
   courtId: string;
+}
+
+interface PendingBooking {
+  courtId: string;
+  startsAt: string;
+  endsAt: string;
 }
 
 export default function BookingCalendar({ courtId }: BookingCalendarProps) {
@@ -14,6 +22,8 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectStart, setSelectStart] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState<PendingBooking | null>(null);
 
   useEffect(() => {
     loadBookings();
@@ -39,29 +49,50 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
 
   async function handleSelect(info: any) {
     console.log('✅ Selezione rilevata:', info);
+    // Salva i dati della prenotazione e apri il modal
+    setPendingBooking({
+      courtId: courtId,
+      startsAt: info.startStr,
+      endsAt: info.endStr
+    });
+    setIsModalOpen(true);
+  }
+
+  async function handleCourtTypeSelected(courtType: 'singolo' | 'doppio', players: User[]) {
+    if (!pendingBooking) return;
+
     setLoading(true);
     setMessage(null);
+    setIsModalOpen(false);
+
     try {
-      console.log('📤 Invio prenotazione:', { courtId, startsAt: info.startStr, endsAt: info.endStr });
+      const playerIds = players.map(p => p.id);
+      console.log('📤 Invio prenotazione:', { ...pendingBooking, courtType, playerIds });
       await createBooking({
-        courtId: courtId,
-        startsAt: info.startStr,
-        endsAt: info.endStr
+        courtId: pendingBooking.courtId,
+        startsAt: pendingBooking.startsAt,
+        endsAt: pendingBooking.endsAt,
+        courtType,
+        playerIds
       });
       
       // Aggiungi immediatamente l'evento al calendario
+      const playerNames = players.map(p => p.firstName || p.lastName || p.email).join(', ');
       setEvents(prev => [...prev, {
-        title: 'Occupato',
-        start: info.startStr,
-        end: info.endStr,
+        title: `Occupato - ${courtType}`,
+        start: pendingBooking.startsAt,
+        end: pendingBooking.endsAt,
         backgroundColor: '#EF4444',
         borderColor: '#DC2626',
         extendedProps: {
-          isBooked: true
+          isBooked: true,
+          courtType: courtType,
+          players: playerNames
         }
       }]);
 
-      setMessage({ type: 'success', text: '✅ Prenotazione confermata!' });
+      setMessage({ type: 'success', text: `✅ Prenotazione confermata! (${courtType} con ${players.length} giocatore${players.length > 1 ? 'i' : ''})` });
+      setPendingBooking(null);
     } catch (error) {
       console.error('❌ Errore prenotazione:', error);
       setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
@@ -70,8 +101,20 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
     }
   }
 
+  function handleModalClose() {
+    setIsModalOpen(false);
+    setPendingBooking(null);
+  }
+
   return (
     <div className="space-y-4">
+      <CourtTypeModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        onSelect={handleCourtTypeSelected}
+        loading={loading}
+      />
+
       {message && (
         <div className={`flex items-center gap-3 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
           {message.type === 'success' ? <CheckCircleIcon className="h-5 w-5" /> : <XCircleIcon className="h-5 w-5" />}
@@ -85,6 +128,8 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
           <li>Clicca e trascina sulle celle <span className="text-blue-600 font-semibold">bianche (libere)</span> per selezionare gli orari</li>
           <li>Le celle <span className="text-red-600 font-semibold">rosse (occupate)</span> non possono essere prenotate</li>
           <li>Puoi selezionare uno o più slot consecutivi</li>
+          <li>Ti verrà chiesto di scegliere se prenotare un singolo o un doppio</li>
+          <li>Potrai quindi cercare e selezionare gli altri giocatori partecipanti</li>
         </ul>
       </div>
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Req, UseGuards, Query } from '@nestjs/common';
 import { ProfileService } from './profile.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
@@ -10,6 +10,11 @@ export class ProfileController {
   @Get()
   async get(@Req() req: any) {
     return this.service.getProfile(req.user.id);
+  }
+
+  @Get('search')
+  async search(@Query('q') query: string, @Req() req: any) {
+    return this.service.searchUsers(query, req.user.id);
   }
 
   @Patch()

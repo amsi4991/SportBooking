@@ -13,6 +13,11 @@ enum Role {
   user
 }
 
+enum CourtType {
+  singolo
+  doppio
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -24,6 +29,7 @@ model User {
   role      Role     @default(user)
   wallet    Wallet?
   bookings  Booking[]
+  bookingPlayers BookingPlayer[] @relation("bookingPlayers")
   transactions Transaction[]
   refreshTokens RefreshToken[]
   createdAt DateTime @default(now())
@@ -52,6 +58,7 @@ model Booking {
   id        String   @id @default(uuid())
   userId    String
   courtId   String   @db.Uuid
+  courtType CourtType
   startsAt  DateTime
   endsAt    DateTime
   totalPrice     Int
@@ -60,8 +67,21 @@ model Booking {
 
   user  User  @relation(fields: [userId], references: [id])
   court Court @relation(fields: [courtId], references: [id])
+  players BookingPlayer[]
 
   @@index([courtId, startsAt, endsAt])
+}
+
+model BookingPlayer {
+  id        String   @id @default(uuid())
+  bookingId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User    @relation(name: "bookingPlayers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, userId])
 }
 
 model RefreshToken {

@@ -14,6 +14,39 @@ export class ProfileService {
     });
   }
 
+  async searchUsers(query: string, currentUserId: string) {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const searchQuery = query.trim().toLowerCase();
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        AND: [
+          { id: { not: currentUserId } },
+          {
+            OR: [
+              { email: { contains: searchQuery, mode: 'insensitive' } },
+              { firstName: { contains: searchQuery, mode: 'insensitive' } },
+              { lastName: { contains: searchQuery, mode: 'insensitive' } }
+            ]
+          }
+        ]
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        city: true
+      },
+      take: 10
+    });
+
+    return users;
+  }
+
   async updateProfile(userId: string, data: {
     firstName?: string;
     lastName?: string;
@@ -44,3 +77,4 @@ export class ProfileService {
     });
   }
 }
+

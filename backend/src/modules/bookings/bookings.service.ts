@@ -24,7 +24,7 @@ export class BookingsService {
     });
   }
 
-  async createBooking(userId: string, courtId: string, startsAt: Date, endsAt: Date) {
+  async createBooking(userId: string, courtId: string, startsAt: Date, endsAt: Date, courtType: 'singolo' | 'doppio', playerIds: string[] = []) {
     // Verifica che la prenotazione non sia nel passato
     const now = new Date();
     if (startsAt < now) {
@@ -52,16 +52,29 @@ export class BookingsService {
       const price = await this.pricing.calculate(courtId, startsAt, endsAt);
       await this.wallet.spend(userId, price);
 
-      return await this.prisma.booking.create({
+      const booking = await this.prisma.booking.create({
         data: {
           userId,
           courtId,
           startsAt,
           endsAt,
+          courtType,
           totalPrice: price,
           paidWithWallet: true
         }
       });
+
+      // Aggiungi i giocatori selezionati
+      if (playerIds && playerIds.length > 0) {
+        await this.prisma.bookingPlayer.createMany({
+          data: playerIds.map(playerId => ({
+            bookingId: booking.id,
+            userId: playerId
+          }))
+        });
+      }
+
+      return booking;
     } finally {
       await this.redis.del(lockKey);
     }

@@ -18,6 +18,8 @@ async function main() {
     create: {
       email: 'admin@test.it',
       password: hash('admin123'),
+      firstName: 'Admin',
+      lastName: 'User',
       role: Role.admin,
       wallet: {
         create: {
@@ -34,6 +36,10 @@ async function main() {
     create: {
       email: 'user@test.it',
       password: hash('user123'),
+      firstName: 'Marco',
+      lastName: 'Rossi',
+      phone: '+39 123 456 7890',
+      city: 'Milano',
       role: Role.user,
       wallet: {
         create: {
@@ -57,8 +63,11 @@ async function main() {
     },
   });
 
-  const court2 = await prisma.court.create({
-    data: {
+  const court2 = await prisma.court.upsert({
+    where: { id: '560e8400-e29b-41d4-a716-446655440000' },
+    update: {},
+    create: {
+      id: '560e8400-e29b-41d4-a716-446655440000',
       name: 'Tennis Club',
       city: 'Milano',
       sport: 'Tennis',
@@ -67,8 +76,11 @@ async function main() {
     }
   });
 
-  const court3 = await prisma.court.create({
-    data: {
+  const court3 = await prisma.court.upsert({
+    where: { id: '570e8400-e29b-41d4-a716-446655440000' },
+    update: {},
+    create: {
+      id: '570e8400-e29b-41d4-a716-446655440000',
       name: 'Pallavolo Arena',
       city: 'Como',
       sport: 'Pallavolo',
@@ -77,21 +89,14 @@ async function main() {
     }
   });
 
-  // PRICE RULES - Create rules for all days of the week
+  // PRICE RULES
   await prisma.priceRule.deleteMany({});
-  const priceRulesData = [];
-  
-  // Create rules for each day (0=Sunday to 6=Saturday)
-  for (let day = 0; day < 7; day++) {
-    priceRulesData.push(
-      { courtId: court1.id, weekday: day, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 5000 },
-      { courtId: court2.id, weekday: day, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 6000 },
-      { courtId: court3.id, weekday: day, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 4000 },
-    );
-  }
-  
   await prisma.priceRule.createMany({
-    data: priceRulesData
+    data: [
+      { courtId: court1.id, weekday: 1, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 5000 },
+      { courtId: court2.id, weekday: 1, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 6000 },
+      { courtId: court3.id, weekday: 1, startTime: new Date('2024-01-01T06:00'), endTime: new Date('2024-01-01T23:00'), price: 4000 },
+    ]
   });
 
   console.log('✅ Seed completato');

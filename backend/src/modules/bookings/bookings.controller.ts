@@ -15,13 +15,15 @@ export class BookingsController {
   @Post()
   async create(
     @Req() req: any,
-    @Body() body: { courtId: string; startsAt: string; endsAt: string }
+    @Body() body: { courtId: string; startsAt: string; endsAt: string; courtType: 'singolo' | 'doppio'; playerIds: string[] }
   ) {
     return this.service.createBooking(
       req.user.id,
       body.courtId,
       new Date(body.startsAt),
-      new Date(body.endsAt)
+      new Date(body.endsAt),
+      body.courtType,
+      body.playerIds || []
     );
   }
 
