@@ -18,20 +18,12 @@ function decodeToken(token: string) {
 }
 
 export default function Navigation() {
-  const { logout } = useAuth();
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const { logout, walletBalance, refreshWallet } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Fetch wallet balance
-    fetch('http://localhost:3000/wallet', {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-      .then(res => res.json())
-      .then(data => setWalletBalance(data.balance))
-      .catch(console.error);
+    // Carica il wallet
+    refreshWallet();
 
     // Check if user is admin by decoding JWT
     const token = localStorage.getItem('token');
@@ -46,7 +38,15 @@ export default function Navigation() {
     } else {
       console.log('No token found in localStorage');
     }
-  }, []);
+
+    // Ascolta evento di aggiornamento wallet
+    const handleWalletUpdate = () => {
+      refreshWallet();
+    };
+
+    window.addEventListener('walletUpdated', handleWalletUpdate);
+    return () => window.removeEventListener('walletUpdated', handleWalletUpdate);
+  }, [refreshWallet]);
 
   const handleLogout = () => {
     logout();

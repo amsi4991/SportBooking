@@ -3,6 +3,7 @@ import Redis from 'ioredis';
 import { PrismaService } from '../../database/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PricingService } from '../pricing/pricing.service';
+import { CourtBlocksService } from '../courts/court-blocks.service';
 
 @Injectable()
 export class BookingsService {
@@ -11,7 +12,8 @@ export class BookingsService {
   constructor(
     private prisma: PrismaService,
     private wallet: WalletService,
-    private pricing: PricingService
+    private pricing: PricingService,
+    private courtBlocks: CourtBlocksService
   ) { }
 
   async getBookingsByCourtId(courtId: string) {
@@ -33,6 +35,12 @@ export class BookingsService {
 
     if (endsAt <= startsAt) {
       throw new ConflictException('L\'orario di fine deve essere dopo quello di inizio');
+    }
+
+    // Verifica se il campo è bloccato in questo orario
+    const isBlocked = await this.courtBlocks.isTimeSlotBlocked(courtId, startsAt, endsAt);
+    if (isBlocked) {
+      throw new ConflictException('Il campo è bloccato durante questo orario');
     }
 
     const lockKey = `lock:${courtId}:${startsAt.toISOString()}:${endsAt.toISOString()}`;

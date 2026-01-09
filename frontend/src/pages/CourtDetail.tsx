@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-import { ArrowLeftIcon, MapPinIcon, StarIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, MapPinIcon, StarIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import BlockCourtModal from '../components/BlockCourtModal';
+import { getBlocksByCourtId, CourtBlock } from '../services/court-blocks';
 
 interface Court {
   id: string;
@@ -27,9 +29,26 @@ export default function CourtDetail() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [blocks, setBlocks] = useState<CourtBlock[]>([]);
 
   useEffect(() => {
-    if (id) loadCourt();
+    // Verifica se l'utente è admin
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setIsAdmin(payload.role === 'admin');
+      } catch (e) {
+        console.error('Errore decodifica token:', e);
+      }
+    }
+
+    if (id) {
+      loadCourt();
+      loadBlocks();
+    }
   }, [id]);
 
   useEffect(() => {
@@ -43,6 +62,17 @@ export default function CourtDetail() {
       setCourt(data);
     } catch (error) {
       console.error('Errore:', error);
+    }
+  }
+
+  async function loadBlocks() {
+    try {
+      if (id) {
+        const data = await getBlocksByCourtId(id);
+        setBlocks(data);
+      }
+    } catch (error) {
+      console.error('Errore caricamento blocchi:', error);
     }
   }
 
@@ -135,7 +165,7 @@ export default function CourtDetail() {
 
             {/* Price */}
             {court.priceRules.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
                 <p className="text-sm text-gray-600 mb-2">Prezzo</p>
                 <p className="text-3xl font-bold text-blue-600">
                   €{(court.priceRules[0].price / 100).toFixed(2)}
@@ -143,8 +173,30 @@ export default function CourtDetail() {
                 <p className="text-sm text-gray-600 mt-2">per ora</p>
               </div>
             )}
+
+            {/* Admin Block Button */}
+            {isAdmin && (
+              <button
+                onClick={() => setShowBlockModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+              >
+                <LockClosedIcon className="h-5 w-5" />
+                Blocca campo
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Block Modal */}
+        {id && (
+          <BlockCourtModal
+            isOpen={showBlockModal}
+            onClose={() => setShowBlockModal(false)}
+            courtId={id}
+            blocks={blocks}
+            onBlockCreated={loadBlocks}
+          />
+        )}
 
         {/* Booking Section */}
         <div className="bg-white rounded-lg shadow-md p-8">

@@ -6,6 +6,7 @@ import { getBookingsByCourtId, createBooking } from '../services/booking';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import CourtTypeModal from './CourtTypeModal';
 import { User } from '../services/users';
+import { getBlocksByCourtId, CourtBlock } from '../services/court-blocks';
 
 interface BookingCalendarProps {
   courtId: string;
@@ -24,15 +25,27 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
   const [selectStart, setSelectStart] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingBooking, setPendingBooking] = useState<PendingBooking | null>(null);
+  const [blocks, setBlocks] = useState<CourtBlock[]>([]);
 
   useEffect(() => {
-    loadBookings();
+    loadData();
   }, [courtId]);
 
-  async function loadBookings() {
+  async function loadData() {
     try {
-      const bookings = await getBookingsByCourtId(courtId);
-      setEvents(bookings.map((b: any) => ({
+      // Carica sia prenotazioni che blocchi in parallelo
+      const [bookings, blocksList] = await Promise.all([
+        getBookingsByCourtId(courtId),
+        getBlocksByCourtId(courtId)
+      ]);
+
+      console.log('📦 Blocchi caricati:', blocksList);
+      console.log('📅 Prenotazioni caricate:', bookings);
+      
+      setBlocks(blocksList);
+
+      // Crea gli eventi dalle prenotazioni
+      const bookingEvents = bookings.map((b: any) => ({
         title: 'Occupato',
         start: b.startsAt,
         end: b.endsAt,
@@ -41,10 +54,58 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
         extendedProps: {
           isBooked: true
         }
-      })));
+      }));
+
+      // Crea gli eventi dai blocchi
+      const blockEvents = blocksList.flatMap(block => {
+        console.log('🔍 Processando blocco:', block);
+        const dates = generateDatesForBlock(block);
+        console.log('📍 Date generate dal blocco:', dates);
+        return dates.map(date => ({
+          title: 'Bloccato',
+          start: date.start,
+          end: date.end,
+          backgroundColor: '#808080',
+          borderColor: '#595959',
+          extendedProps: {
+            isBlocked: true
+          }
+        }));
+      });
+
+      console.log('🎨 Block events finali:', blockEvents);
+
+      // Combina tutti gli eventi
+      setEvents([...bookingEvents, ...blockEvents]);
+      console.log('✅ Tutti gli eventi impostati:', [...bookingEvents, ...blockEvents]);
     } catch (error) {
-      console.error('Errore caricamento prenotazioni:', error);
+      console.error('Errore caricamento dati:', error);
     }
+  }
+
+  function generateDatesForBlock(block: CourtBlock): Array<{ start: string; end: string }> {
+    const dates: Array<{ start: string; end: string }> = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Resetta l'ora a mezzanotte
+
+    // Per i prossimi 365 giorni, genera gli eventi bloccati
+    for (let i = 0; i < 365; i++) {
+      const currentDate = new Date(today);
+      currentDate.setDate(currentDate.getDate() + i);
+
+      const dayOfWeek = currentDate.getDay();
+      const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0=lunedì, 6=domenica
+
+      if (block.daysOfWeek.includes(adjustedDay)) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        dates.push({
+          start: `${dateStr}T${block.startTime}`,
+          end: `${dateStr}T${block.endTime}`
+        });
+      }
+    }
+
+    return dates;
   }
 
   async function handleSelect(info: any) {
@@ -93,6 +154,9 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
 
       setMessage({ type: 'success', text: `✅ Prenotazione confermata! (${courtType} con ${players.length} giocatore${players.length > 1 ? 'i' : ''})` });
       setPendingBooking(null);
+      
+      // Emetti evento per aggiornare il wallet
+      window.dispatchEvent(new Event('walletUpdated'));
     } catch (error) {
       console.error('❌ Errore prenotazione:', error);
       setMessage({ type: 'error', text: `❌ Errore: ${error instanceof Error ? error.message : 'Sconosciuto'}` });
@@ -127,6 +191,7 @@ export default function BookingCalendar({ courtId }: BookingCalendarProps) {
         <ul className="list-disc list-inside mt-2">
           <li>Clicca e trascina sulle celle <span className="text-blue-600 font-semibold">bianche (libere)</span> per selezionare gli orari</li>
           <li>Le celle <span className="text-red-600 font-semibold">rosse (occupate)</span> non possono essere prenotate</li>
+          <li>Le celle <span className="text-gray-600 font-semibold">grigie (bloccate)</span> sono riservate dall'amministratore</li>
           <li>Puoi selezionare uno o più slot consecutivi</li>
           <li>Ti verrà chiesto di scegliere se prenotare un singolo o un doppio</li>
           <li>Potrai quindi cercare e selezionare gli altri giocatori partecipanti</li>

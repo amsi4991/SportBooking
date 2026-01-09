@@ -25,6 +25,7 @@ export class ProfileService {
       where: {
         AND: [
           { id: { not: currentUserId } },
+          { role: { not: 'admin' } },
           {
             OR: [
               { email: { contains: searchQuery, mode: 'insensitive' } },
